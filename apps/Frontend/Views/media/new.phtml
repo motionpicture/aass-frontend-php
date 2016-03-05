@@ -1,0 +1,41 @@
+﻿<?php require __DIR__ . '/../header.phtml' ?>
+
+<script src="/js/media/new.js"></script>
+
+<div class="row">
+    <div class="main">
+        <h1 class="page-header">メディア登録</h1>
+
+        <div class="progress" style="display:none;">
+	        <p>アップロードしています...</p>
+	        <p id="progressRate">0%</p>
+        </div>
+
+        <p class="error" style="color: #FF0000;"></p>
+
+        <form role="search" enctype="multipart/form-data" method="POST">
+            <input type="hidden" name="MAX_FILE_SIZE" value="2000000000" />
+            <input id="session_upload_progress_name" type="hidden" name="<?= ini_get('session.upload_progress.name') ?>" value="<?= $defaults[ini_get('session.upload_progress.name')] ?>">
+
+            <div class="form-group">
+                <p>
+                    <input type="text" name="title" class="form-control" value="<?= $defaults['title'] ?>" placeholder="動画名">
+                </p>
+                <p>
+                    <textarea type="text" name="description" class="form-control" placeholder="動画概要"><?= $defaults['description'] ?></textarea>
+                </p>
+                <p>
+                    <input type="text" name="uploadedBy" class="form-control" value="<?= $defaults['uploadedBy'] ?>" placeholder="動画登録者名">
+                </p>
+                <p>
+                    <input type="file" name="file" value="">
+                </p>
+                <p>
+                    <button type="submit" class="btn btn-primary">登録</button>
+                <p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php require __DIR__ . '/../footer.phtml' ?>

@@ -1,0 +1,44 @@
+<?php require __DIR__ . '/../header.phtml' ?>
+
+<script src="/js/media/index.js"></script>
+
+<style type="text/css">
+table td {
+    text-align: right;
+}
+</style>
+
+<div class="row">
+    <div class="main">
+        <h1 class="page-header">メディア一覧</h1>
+
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <tbody>
+                    <?php foreach ($medias as $media) { ?>
+                    <tr>
+                        <td><?= $media->getPartitionKey() ?></td>
+                        <td><?= $media->getRowKey() ?></td>
+                        <td><?= $media->getPropertyValue('Title') ?></td>
+                        <td><?= $media->getPropertyValue('UploadedBy') ?></td>
+                        <td><?= $media->getPropertyValue('Size') ?></td>
+                        <td><?= $media->getPropertyValue('PlaytimeString') ?></td>
+                        <td>
+                            <input type="hidden" name="rowKey" value="<?= $media->getRowKey() ?>">
+                            <a href="/media/<?= $media->getRowKey() ?>/edit" class="">編集</a>
+                            <a href="/media/<?= $media->getRowKey() ?>/download" target="_blank" class="">ダウンロード</a>
+                            <a href="javascript:void(0)" class="deleteMedia">削除</a>
+                            <a href="javascript:void(0)" class="">動画申請</a>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+</div>
+
+<?php require __DIR__ . '/../footer.phtml' ?>

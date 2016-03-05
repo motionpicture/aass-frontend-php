@@ -1,0 +1,31 @@
+﻿<?php require __DIR__ . '/../header.phtml' ?>
+
+<script src="/js/media/edit.js"></script>
+
+<div class="row">
+    <div class="main">
+        <h1 class="page-header">メディア編集</h1>
+
+        <p class="error" style="color: #FF0000;"></p>
+
+        <form method="POST">
+            <input hidden name="rowKey" value="<?= $this->dispatcher->getParam('rowKey') ?>">
+            <div class="form-group">
+                <p>
+                    <input type="text" name="title" class="form-control" value="<?= $defaults['title'] ?>" placeholder="動画名">
+                </p>
+                <p>
+                    <textarea type="text" name="description" class="form-control" placeholder="動画概要"><?= $defaults['description'] ?></textarea>
+                </p>
+                <p>
+                    <input type="text" name="uploadedBy" class="form-control" value="<?= $defaults['uploadedBy'] ?>" placeholder="動画登録者名">
+                </p>
+                <p>
+                    <button type="submit" class="btn btn-primary">登録</button>
+                <p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php require __DIR__ . '/../footer.phtml' ?>

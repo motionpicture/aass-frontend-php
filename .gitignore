@@ -1,0 +1,12 @@
+/logs/*
+/uploads/*
+.project
+.settings
+Web.config
+composer.phar
+composer.lock
+vendor/*
+mode.php
+
+!.gitignore
+!.gitkeep
