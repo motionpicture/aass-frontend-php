@@ -7,58 +7,24 @@ use \WindowsAzure\Table\Models\Filters\Filter;
 
 class Media extends \Aass\Common\Models\Media
 {
-    public function getListByUserId($userId)
+    public function getListByEventId($eventId)
     {
-        $entities = [];
+        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId');
+        $statement->execute([
+            'eventId' => $eventId
+        ]);
 
-        // ページングに対応
-        $nextPartitionKey = null;
-        $nextRowKey = null;
-        $i = 0;
-
-        while ($i == 0 || !is_null($nextPartitionKey) || !is_null($nextRowKey)) {
-            $i++;
-
-            $qopts = new \WindowsAzure\Table\Models\QueryEntitiesOptions();
-            $filter =  Filter::applyAnd(
-                Filter::applyEq(Filter::applyPropertyName('PartitionKey'), Filter::applyConstant($userId, EdmType::STRING)),
-                Filter::applyNe(Filter::applyPropertyName('Status'), Filter::applyConstant(self::STATUS_DELETED, EdmType::STRING))
-            );
-            $qopts->setFilter($filter);
-            $qopts->setTop(10);
-
-            if ($nextPartitionKey) {
-                $qopts->setNextPartitionKey($nextPartitionKey);
-            }
-            if ($nextRowKey) {
-                $qopts->setNextRowKey($nextRowKey);
-            }
-
-            $result = $this->azureTable->queryEntities('Media', $qopts);
-
-            $entities = array_merge($result->getEntities(), $entities);
-            $nextPartitionKey = $result->getNextPartitionKey();
-            $nextRowKey = $result->getNextRowKey();
-        }
-
-        return $entities;
+        return $statement->fetchAll();
     }
 
-    public function getByRowKey($partitionKey, $rowKey)
+    public function getById($id)
     {
-        $entities = [];
+        $statement = $this->db->prepare('SELECT * FROM media WHERE id = :id LIMIT 1');
+        $statement->execute([
+            ':id' => $id,
+        ]);
 
-        $qopts = new \WindowsAzure\Table\Models\QueryEntitiesOptions();
-        $filter =  Filter::applyAnd(
-            Filter::applyEq(Filter::applyPropertyName('PartitionKey'), Filter::applyConstant($partitionKey, EdmType::STRING)),
-            Filter::applyEq(Filter::applyPropertyName('RowKey'), Filter::applyConstant($rowKey, EdmType::STRING))
-        );
-        $qopts->setFilter($filter);
-        $qopts->setTop(1);
-        $result = $this->azureTable->queryEntities('Media', $qopts);
-        $entities = $result->getEntities();
-
-        return (!empty($entities)) ? $entities[0] : null;
+        return $statement->fetch();
     }
 
     public function deleteByRowKey($partitionKey, $rowKey)

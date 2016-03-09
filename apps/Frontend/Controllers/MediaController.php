@@ -8,8 +8,8 @@ class MediaController extends BaseController
     public function indexAction()
     {
         try {
-            $mediaModel = new \Aass\Frontend\Models\Media;
-            $medias = $mediaModel->getListByUserId($this->session->get('auth')['UserId']);
+            $mediaModel = new MediaModel;
+            $medias = $mediaModel->getListByEventId($this->auth->getId());
             $this->view->medias = $medias;
         } catch (\Exception $e) {
             $this->logger->addError("fail in getListByUserId. message:{$e}");
@@ -24,23 +24,10 @@ class MediaController extends BaseController
      */
     public function newAction()
     {
-        if ($this->request->isPost()) {
-            return $this->dispatcher->forward([
-                'contorller' => 'media',
-                'action' => 'create',
-            ]);
-        }
-
-        $messages = [];
-        $defaults = [
-            ini_get('session.upload_progress.name') => uniqid('newMedia'),
-            'title' => '',
-            'description' => '',
-            'uploadedBy' => '',
-        ];
-
-        $this->view->messages = $messages;
-        $this->view->defaults = $defaults;
+        return $this->dispatcher->forward([
+            'contorller' => 'media',
+            'action' => 'edit',
+        ]);
     }
 
     /**
@@ -58,7 +45,7 @@ class MediaController extends BaseController
             ini_get('session.upload_progress.name') => '',
             'title' => '',
             'description' => '',
-            'uploadedBy' => '',
+            'uploaded_by' => '',
         ];
 
         $this->logger->addDebug(print_r($_POST, true));
@@ -70,7 +57,7 @@ class MediaController extends BaseController
         if (!$defaults['description']) {
             $messages[] = '動画概要を選択してください';
         }
-        if (!$defaults['uploadedBy']) {
+        if (!$defaults['uploaded_by']) {
             $messages[] = '動画登録者名を選択してください';
         }
         if ($_FILES['file']['size'] <= 0) {
@@ -118,35 +105,23 @@ class MediaController extends BaseController
      */
     public function editAction()
     {
-        if ($this->request->isPost()) {
-            return $this->dispatcher->forward([
-                'contorller' => 'media',
-                'action' => 'update',
-                'params' => $this->dispatcher->getParams()
-            ]);
-        }
-
-        $rowKey = $this->dispatcher->getParam('rowKey');
-        $mediaEntity = null;
-
-        try {
-            $mediaModel = new MediaModel;
-            $mediaEntity = $mediaModel->getByRowKey($this->session->get('auth')['UserId'], $rowKey);
-        } catch (\Exception $e) {
-            $this->logger->addError("fail in getByRowKey. message:{$e}");
-        }
-
-        if (is_null($mediaEntity)) {
-            throw 'メディアが存在しません';
-        }
-
         $messages = [];
         $defaults = [
             ini_get('session.upload_progress.name') => uniqid('newMedia'),
-            'title' => $mediaEntity->getPropertyValue('Title'),
-            'description' => $mediaEntity->getPropertyValue('Description'),
-            'uploadedBy' => $mediaEntity->getPropertyValue('UploadedBy'),
+            'title' => '',
+            'description' => '',
+            'uploaded_by' => '',
         ];
+
+        if ($this->dispatcher->getParam('id')) {
+            try {
+                $mediaModel = new MediaModel;
+                $defaults = array_merge($defaults, $mediaModel->getById($this->dispatcher->getParam('id')));
+            } catch (\Exception $e) {
+                $this->logger->addError("getById throw exception. message:{$e}");
+                throw $e;
+            }
+        }
 
         $this->view->messages = $messages;
         $this->view->defaults = $defaults;

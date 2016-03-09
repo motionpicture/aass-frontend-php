@@ -1,0 +1,126 @@
+-- phpMyAdmin SQL Dump
+-- version 4.5.0.2
+-- http://www.phpmyadmin.net
+--
+-- Host: localhost
+-- Generation Time: 2016 年 3 朁E09 日 06:36
+-- サーバのバージョン： 10.0.17-MariaDB
+-- PHP Version: 5.6.14
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
+
+--
+-- Database: `aass`
+--
+CREATE DATABASE IF NOT EXISTS `aass` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `aass`;
+
+-- --------------------------------------------------------
+
+--
+-- テーブルの構造 `admin`
+--
+
+DROP TABLE IF EXISTS `admin`;
+CREATE TABLE `admin` (
+  `id` int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `user_id` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- テーブルの構造 `application`
+--
+
+DROP TABLE IF EXISTS `application`;
+CREATE TABLE `application` (
+  `id` int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `media_id` int(11) UNSIGNED NOT NULL,
+  `status` tinyint(1) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- テーブルの構造 `event`
+--
+
+DROP TABLE IF EXISTS `event`;
+CREATE TABLE `event` (
+  `id` int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `user_id` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `held_at` datetime NOT NULL,
+  `place` varchar(255) NOT NULL,
+  `remarks` text DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- テーブルの構造 `media`
+--
+
+DROP TABLE IF EXISTS `media`;
+CREATE TABLE `media` (
+  `id` int(11) UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  `event_id` int(11) UNSIGNED NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `description` text NOT NULL,
+  `uploaded_by` varchar(255) NOT NULL,
+  `status` tinyint(1) NOT NULL,
+  `size` int(10) UNSIGNED NOT NULL,
+  `extension` varchar(255) NOT NULL,
+  `playtime_string` varchar(255) NOT NULL,
+  `playtime_seconds` float NOT NULL,
+  `url` varchar(255) NOT NULL,
+  `asset_id` varchar(255) NOT NULL,
+  `job_id` varchar(255) NOT NULL,
+  `job_state` tinyint(1) NOT NULL,
+  `job_start_at` datetime NOT NULL,
+  `job_end_at` datetime NOT NULL,
+  `deleted_at` datetime NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+ALTER TABLE `admin`
+  ADD UNIQUE KEY `user_id` (`user_id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+ALTER TABLE `application`
+  ADD KEY `media_id` (`media_id`);
+
+ALTER TABLE `event`
+  ADD UNIQUE KEY `user_id` (`user_id`);
+
+ALTER TABLE `media`
+  ADD KEY `event_id` (`event_id`);
+
+--
+-- ダンプしたテーブルの制約
+--
+
+--
+-- テーブルの制約 `application`
+--
+ALTER TABLE `application`
+  ADD CONSTRAINT `application_ibfk_1` FOREIGN KEY (`media_id`) REFERENCES `media` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- テーブルの制約 `media`
+--
+ALTER TABLE `media`
+  ADD CONSTRAINT `media_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;

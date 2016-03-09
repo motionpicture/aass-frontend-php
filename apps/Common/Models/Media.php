@@ -3,9 +3,9 @@ namespace Aass\Common\Models;
 
 class Media extends Base
 {
-    public $partitionKey; // クリエーターユーザID
-    public $rowKey; // ユニークID
-    public $name; // 動画名
+    public $id;
+    public $showId;
+    public $title; // 動画名
     public $description; // 動画概要
     public $uploadedBy; // 動画登録者名
     public $status; // 状態

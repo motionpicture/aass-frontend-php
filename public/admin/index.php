@@ -1,19 +1,18 @@
 <?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-$_SERVER['PHP_SELF'] = '/index.php';
+$_SERVER['PHP_SELF'] = __DIR__ . '/index.php';
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
 spl_autoload_register(function ($class) {
-    $file = __DIR__ . '/../apps/' . strtr(str_replace('Aass\\', '', $class), '\\', DIRECTORY_SEPARATOR) . '.php';
+    $file = __DIR__ . '/../../apps/' . strtr(str_replace('Aass\\', '', $class), '\\', DIRECTORY_SEPARATOR) . '.php';
     if (is_readable($file)) {
         require_once $file;
         return;
     }
 });
 
-use Phalcon\Loader;
 use Phalcon\Mvc\View;
 use Phalcon\Mvc\Application;
 use Phalcon\Di\FactoryDefault;
@@ -23,18 +22,9 @@ use Phalcon\Mvc\Dispatcher;
 use Phalcon\Events\Manager as EventsManager;
 
 // try {
-    // Register an autoloader
-//     $loader = new Loader();
-//     $loader->registerDirs(array(
-//         '../apps/Frontend/Controllers/',
-//         '../apps/Frontend/Models/'
-//     ))->register();
-
-    // Create a DI
     $di = new FactoryDefault();
-    include __DIR__ . '/../apps/Common/dependencies.php';
+    include __DIR__ . '/../../apps/Common/dependencies.php';
 
-    // Start the session the first time a component requests the session service
     $di->set('session', function ()
     {
         $session = new Session();
@@ -43,27 +33,26 @@ use Phalcon\Events\Manager as EventsManager;
         return $session;
     });
 
-    $di->set('auth', function()
-    {
-        return new \Aass\Frontend\Plugins\SecurityPlugin;
-    });
-
     $di->set('dispatcher', function()
     {
         // Create an events manager
         $eventsManager = new EventsManager();
-        $eventsManager->attach('dispatch:beforeExecuteRoute', new \Aass\Frontend\Plugins\SecurityPlugin);
+        $eventsManager->attach('dispatch:beforeExecuteRoute', new \Aass\Backend\Plugins\SecurityPlugin);
         // Handle exceptions and not-found exceptions using NotFoundPlugin
 //         $eventsManager->attach('dispatch:beforeException', new NotFoundPlugin);
 
         $dispatcher = new Dispatcher();
         $dispatcher->setEventsManager($eventsManager);
-        $dispatcher->setDefaultNamespace('Aass\Frontend\Controllers');
+        $dispatcher->setDefaultNamespace('Aass\Backend\Controllers');
 
         return $dispatcher;
     });
 
-    // logger
+    $di->set('auth', function()
+    {
+        return new \Aass\Backend\Plugins\SecurityPlugin;
+    });
+
     $di->set('logger', function() use ($di)
     {
         // プロセスID
@@ -72,11 +61,11 @@ use Phalcon\Events\Manager as EventsManager;
 
         $formatter = new \Monolog\Formatter\LineFormatter(null, null, true); // 第３引数で改行を有効に
         $stream = new \Monolog\Handler\StreamHandler(
-            __DIR__ . "/../logs/{$di->get('mode')}/Frontend/" . date('Ymd') . ".log",
+            __DIR__ . "/../../logs/{$di->get('mode')}/Backend/" . date('Ymd') . ".log",
             ($di->get('mode') == 'dev') ? \Monolog\Logger::DEBUG : \Monolog\Logger::INFO
         );
         $stream->setFormatter($formatter);
-        $logger = new \Monolog\Logger("AassFrontend[{$di->get('mode')}] [PID:{$pid}]");
+        $logger = new \Monolog\Logger("AassBackend[{$di->get('mode')}] [PID:{$pid}]");
         $logger->pushHandler($stream);
 
         return $logger;
@@ -96,50 +85,35 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'logout'
         ])->setName('logout');
 
-        $router->add('/medias', [
-            'controller' => 'media',
-            'action' => 'index'
-        ])->setName('medias');
-
-        $router->add('/media/new', [
-            'controller' => 'media',
+        $router->add('/event/new', [
+            'controller' => 'event',
             'action' => 'new'
-        ])->setName('mediaNew');
+        ])->setName('eventNew');
 
-        $router->add('/media/new/progress/{name}', [
-            'controller' => 'media',
-            'action' => 'newProgress'
-        ])->setName('mediaNewProgress');
-
-        $router->add('/media/{id}/edit', [
-            'controller' => 'media',
+        $router->add('/event/{id}/edit', [
+            'controller' => 'event',
             'action' => 'edit'
-        ])->setName('mediaEdit');
+        ])->setName('eventEdit');
 
-        $router->add('/media/{id}/download', [
-            'controller' => 'media',
-            'action' => 'download'
-        ])->setName('mediaDownload');
-
-        $router->add('/media/{id}/delete', [
-            'controller' => 'media',
-            'action' => 'delete'
-        ])->setName('mediaDelete');
+        $router->add('/events', [
+            'controller' => 'event',
+            'action' => 'index'
+        ])->setName('events');
 
         return $router;
     });
 
-    // Setup the view component
     $di->set('view', function () {
         $view = new View();
-        $view->setViewsDir(__DIR__ . '/../apps/Frontend/Views/');
+        $view->setViewsDir(__DIR__ . '/../../apps/Backend/Views/');
+
         return $view;
     });
 
-    // Setup a base URI so that all generated URIs include the "tutorial" folder
     $di->set('url', function () {
         $url = new UrlProvider();
-//         $url->setBaseUri('/tutorial/');
+        $url->setBaseUri('/admin/');
+
         return $url;
     });
 

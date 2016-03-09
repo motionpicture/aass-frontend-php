@@ -1,0 +1,17 @@
+<?php require __DIR__ . '/../header.phtml' ?>
+
+上映会一覧
+<table>
+<tbody>
+<?php foreach ($events as $event) { ?>
+<tr>
+    <td><a href="<?= $this->url->get(['for' => 'eventEdit', 'id' => $event['id']]) ?>"><?= $event['user_id'] ?></a></td>
+    <td><?= $event['email'] ?></td>
+    <td><?= $event['place'] ?></td>
+</tr>
+
+<?php }?>
+</tbody>
+</table>
+
+<?php require __DIR__ . '/../footer.phtml' ?>

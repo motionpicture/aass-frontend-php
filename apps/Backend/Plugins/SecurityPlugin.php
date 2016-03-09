@@ -1,5 +1,5 @@
 <?php
-namespace Aass\Frontend\Plugins;
+namespace Aass\Backend\Plugins;
 
 use Phalcon\Events\Event;
 use Phalcon\Mvc\User\Plugin;
@@ -7,7 +7,7 @@ use Phalcon\Mvc\Dispatcher;
 
 class SecurityPlugin extends Plugin
 {
-    const AUTH_SESSION_NAME = 'AassFrontendAuth';
+    const AUTH_SESSION_NAME = 'AassBackendAuth';
 
     public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
     {
@@ -39,9 +39,9 @@ class SecurityPlugin extends Plugin
         $this->session->destroy();
     }
 
-    public function getId()
+    public function getUserId()
     {
-        $event = $this->session->get(self::AUTH_SESSION_NAME);
-        return $event['id'];
+        $admin = $this->session->get(self::AUTH_SESSION_NAME);
+        return $admin['user_id'];
     }
 }

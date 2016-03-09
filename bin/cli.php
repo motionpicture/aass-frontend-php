@@ -33,32 +33,12 @@ spl_autoload_register(function ($class) {
     }
 });
 
-
-
+use Phalcon\Di\FactoryDefault;
+use Phalcon\Mvc\Dispatcher;
 
 // Using the CLI factory default services container
 $di = new Phalcon\Di\FactoryDefault\Cli();
-
-$di->set('mode', function()
-{
-    $modeFile = __DIR__ . '/../mode.php';
-    if (false === is_file($modeFile)) {
-        exit('The application "mode file" does not exist.');
-    }
-    include $modeFile;
-    if (empty($mode)) {
-        exit('The application "mode" does not exist.');
-    }
-
-    return $mode;
-});
-
-// Load the configuration file
-$di->set('config', function() use ($di)
-{
-    $configs = new Phalcon\Config\Adapter\Ini(__DIR__ . '/../config/config.ini');
-    return $configs[$di->get('mode')];
-});
+include __DIR__ . '/../apps/Common/dependencies.php';
 
 $di->set('dispatcher', function()
 {
@@ -95,67 +75,6 @@ $di->set('logger', function() use ($di, $arguments)
     }
 
     return $logger;
-});
-
-// mailer
-$di->set('mailer', function() use ($di)
-{
-    \Swift_Preferences::getInstance()->setCharset('UTF-8');
-    if ($di->get('mode') == 'dev') {
-        $transport = \Swift_SmtpTransport::newInstance()
-            ->setHost('smtp.gmail.com')
-            ->setPort(465)
-            ->setEncryption('ssl')
-            ->setUsername('noreply@motionpicture.jp')
-            ->setPassword('b7Jb7%Cl');
-    } else {
-        $transport = \Swift_SmtpTransport::newInstance()
-            ->setHost('smtp.gmail.com')
-            ->setPort(465)
-            ->setEncryption('ssl')
-            ->setUsername('noreply@motionpicture.jp')
-            ->setPassword('b7Jb7%Cl');
-    }
-    $mailer = \Swift_Mailer::newInstance($transport);
-
-    return $mailer;
-});
-
-// db
-$di->set('azureTable', function() use ($di)
-{
-    $connectionString =  sprintf(
-        'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
-        'https',
-        $di->get('config')['storage_account_name'],
-        $di->get('config')['storage_account_key']
-    );
-
-    return \WindowsAzure\Common\ServicesBuilder::getInstance()->createTableService($connectionString);
-});
-
-// mediaService
-$di->set('mediaService', function() use ($di)
-{
-    $settings = new \WindowsAzure\Common\Internal\MediaServicesSettings(
-        $di->get('config')['media_service_account_name'],
-        $di->get('config')['media_service_account_key'],
-        \WindowsAzure\Common\Internal\Resources::MEDIA_SERVICES_URL,
-        \WindowsAzure\Common\Internal\Resources::MEDIA_SERVICES_OAUTH_URL
-    );
-    return \WindowsAzure\Common\ServicesBuilder::getInstance()->createMediaServicesService($settings);
-});
-
-// mediaService
-$di->set('blobService', function() use ($di)
-{
-    $connectionString =  sprintf(
-        'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
-        'https',
-        $di->get('config')['storage_account_name'],
-        $di->get('config')['storage_account_key']
-    );
-    return \WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService($connectionString);
 });
 
 

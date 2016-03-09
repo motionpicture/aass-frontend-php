@@ -1,7 +1,7 @@
 <?php
-namespace Aass\Frontend\Controllers;
+namespace Aass\Backend\Controllers;
 
-use Aass\Frontend\Models\Event as EventModel;
+use Aass\Backend\Models\Admin as adminModel;
 
 class AuthController extends BaseController
 {
@@ -9,13 +9,13 @@ class AuthController extends BaseController
     {
         if ($this->request->isPost()) {
             $this->logger->addDebug("try to login as {$this->request->getPost('user_id')}/{$this->request->getPost('password')}...");
-            $eventModel = new EventModel;
-            $event = $eventModel->getLoginUser($this->request->getPost('user_id'), $this->request->getPost('password'));
+            $adminModel = new adminModel;
+            $admin = $adminModel->getLoginUser($this->request->getPost('user_id'), $this->request->getPost('password'));
 
-            if ($event) {
-                $this->logger->addDebug(var_export($event, true));
-                $this->auth->login($event);
-                $this->flash->success("Welcome {$event['user_id']}");
+            if ($admin) {
+                $this->logger->addDebug(var_export($admin, true));
+                $this->auth->login($admin);
+                $this->flash->success("Welcome {$admin['user_id']}");
 
                 return $this->response->redirect('');
             }

@@ -1,12 +1,12 @@
 <?php
 namespace Aass\Common\Models;
 
-class Show extends Base
+class Event extends Base
 {
-    public $partitionKey;
-    public $rowKey; // ユーザーID
+    public $id;
+    public $userId;
     public $email; // メールアドレス
     public $password; // パスワード
-    public $date; // 上映日時
+    public $heldAt; // 上映日時
     public $place; // 上映場所
 }

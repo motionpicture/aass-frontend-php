@@ -2,43 +2,25 @@
 
 <script src="/js/media/index.js"></script>
 
-<style type="text/css">
-table td {
-    text-align: right;
-}
-</style>
+動画一覧
+<table>
+<tbody>
+<?php foreach ($medias as $media) { ?>
+<tr>
+    <td><?= $media['title'] ?></td>
+    <td><?= $media['uploaded_by'] ?></td>
+    <td><?= $media['size'] ?></td>
+    <td>
+        <input type="hidden" name="id" value="<?= $media['id'] ?>">
+        <a href="<?= $this->url->get(['for' => 'mediaEdit', 'id' => $media['id']]) ?>" class="">編集</a>
+        <a href="<?= $this->url->get(['for' => 'mediaDownload', 'id' => $media['id']]) ?>" target="_blank" class="">ダウンロード</a>
+        <a href="javascript:void(0)" class="deleteMedia">削除</a>
+        <a href="javascript:void(0)" class="">動画申請</a>
+    </td>
+</tr>
 
-<div class="row">
-    <div class="main">
-        <h1 class="page-header">メディア一覧</h1>
-
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <tbody>
-                    <?php foreach ($medias as $media) { ?>
-                    <tr>
-                        <td><?= $media->getPartitionKey() ?></td>
-                        <td><?= $media->getRowKey() ?></td>
-                        <td><?= $media->getPropertyValue('Title') ?></td>
-                        <td><?= $media->getPropertyValue('UploadedBy') ?></td>
-                        <td><?= $media->getPropertyValue('Size') ?></td>
-                        <td><?= $media->getPropertyValue('PlaytimeString') ?></td>
-                        <td>
-                            <input type="hidden" name="rowKey" value="<?= $media->getRowKey() ?>">
-                            <a href="/media/<?= $media->getRowKey() ?>/edit" class="">編集</a>
-                            <a href="/media/<?= $media->getRowKey() ?>/download" target="_blank" class="">ダウンロード</a>
-                            <a href="javascript:void(0)" class="deleteMedia">削除</a>
-                            <a href="javascript:void(0)" class="">動画申請</a>
-                        </td>
-                    </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-</div>
+<?php }?>
+</tbody>
+</table>
 
 <?php require __DIR__ . '/../footer.phtml' ?>
