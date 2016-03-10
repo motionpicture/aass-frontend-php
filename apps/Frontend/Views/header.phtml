@@ -22,7 +22,8 @@
     <ul class="nav navbar-nav navbar-right">
         <li><a href="<?= $this->url->get(['for' => 'mediaNew']) ?>">メディア登録</a></li>
         <li><a href="<?= $this->url->get(['for' => 'medias']) ?>">メディア一覧</a></li>
+        <li><a href="<?= $this->url->get(['for' => 'logout']) ?>">ログアウト</a></li>
     </ul>
-    こんにちは <?= $this->session->get('auth')['UserId'] ?>さん
+    こんにちは <?= $this->auth->getUserId() ?>さん
 
     <div class="container-fluid">

@@ -1,17 +1,14 @@
 <?php
 namespace Aass\Frontend\Models;
 
-use \WindowsAzure\Table\Models\EdmType;
-use \WindowsAzure\Table\Models\Entity;
-use \WindowsAzure\Table\Models\Filters\Filter;
-
 class Media extends \Aass\Common\Models\Media
 {
     public function getListByEventId($eventId)
     {
-        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId');
+        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId AND status <> :status');
         $statement->execute([
-            'eventId' => $eventId
+            'eventId' => $eventId,
+            'status' => self::STATUS_DELETED
         ]);
 
         return $statement->fetchAll();
@@ -19,7 +16,7 @@ class Media extends \Aass\Common\Models\Media
 
     public function getById($id)
     {
-        $statement = $this->db->prepare('SELECT * FROM media WHERE id = :id LIMIT 1');
+        $statement = $this->db->prepare('SELECT * FROM media WHERE id = :id');
         $statement->execute([
             ':id' => $id,
         ]);
@@ -27,70 +24,50 @@ class Media extends \Aass\Common\Models\Media
         return $statement->fetch();
     }
 
-    public function deleteByRowKey($partitionKey, $rowKey)
+    public function deleteById($id)
     {
-        $entities = [];
+        $statement = $this->db->prepare('UPDATE media SET status = :status, deleted_at = NOW(), updated_at = NOW() WHERE id = :id');
+        $result = $statement->execute([
+            ':id' => $id,
+            ':status' => self::STATUS_DELETED
+        ]);
 
-        $qopts = new \WindowsAzure\Table\Models\QueryEntitiesOptions();
-        $filter =  Filter::applyAnd(
-                Filter::applyEq(Filter::applyPropertyName('PartitionKey'), Filter::applyConstant($partitionKey, EdmType::STRING)),
-                Filter::applyEq(Filter::applyPropertyName('RowKey'), Filter::applyConstant($rowKey, EdmType::STRING))
-                );
-        $qopts->setFilter($filter);
-        $qopts->setTop(1);
-        $result = $this->azureTable->queryEntities('Media', $qopts);
-        $entities = $result->getEntities();
-
-        $entity = (!empty($entities)) ? $entities[0] : null;
-
-        if (!is_null($entity)) {
-            $entity->addProperty('Status', EdmType::STRING, self::STATUS_DELETED);
-            $result = $this->azureTable->mergeEntity('Media', $entity);
-        }
+        return $result;
     }
 
     /**
-     * メディアエンティティを作成する
+     * 更新する
      *
      * @return boolean
      */
-    public function create($partitionKey, $rowKey, $extension, $title, $description, $uploadedBy)
+    public function update($params)
     {
-        $entity = new Entity();
-        $entity->setPartitionKey($partitionKey);
-        $entity->setRowKey($rowKey);
-        $entity->addProperty('Extension', EdmType::STRING, $extension);
-        $entity->addProperty('Title', EdmType::STRING, $title);
-        $entity->addProperty('Description', EdmType::STRING, $description);
-        $entity->addProperty('UploadedBy', EdmType::STRING, $uploadedBy);
-        $entity->addProperty('Status', EdmType::STRING, self::STATUS_UPLOADED);
-
-        $result = $this->azureTable->insertEntity('Media', $entity);
-        $this->logger->addDebug(var_export($result, true));
-        return ($result->getEntity()->isValid());
-    }
-
-    public function update($partitionKey, $rowKey, $title, $description, $uploadedBy)
-    {
-        $entities = [];
-
-        $qopts = new \WindowsAzure\Table\Models\QueryEntitiesOptions();
-        $filter =  Filter::applyAnd(
-                Filter::applyEq(Filter::applyPropertyName('PartitionKey'), Filter::applyConstant($partitionKey, EdmType::STRING)),
-                Filter::applyEq(Filter::applyPropertyName('RowKey'), Filter::applyConstant($rowKey, EdmType::STRING))
-                );
-        $qopts->setFilter($filter);
-        $qopts->setTop(1);
-        $result = $this->azureTable->queryEntities('Media', $qopts);
-        $entities = $result->getEntities();
-
-        $entity = (!empty($entities)) ? $entities[0] : null;
-
-        if (!is_null($entity)) {
-            $entity->addProperty('Title', EdmType::STRING, "{$title}");
-            $entity->addProperty('Description', EdmType::STRING, "{$description}");
-            $entity->addProperty('UploadedBy', EdmType::STRING, "{$uploadedBy}");
-            $result = $this->azureTable->mergeEntity('Media', $entity);
+        $this->logger->addDebug(var_export($params, true));
+        if (isset($params['id']) && $params['id']) {
+            $statement = $this->db->prepare('UPDATE media SET title = :title, description = :description, uploaded_by = :uploadedBy, updated_at = NOW() WHERE id = :id');
+            $result = $statement->execute([
+                ':id' => $params['id'],
+                ':title' => $params['title'],
+                ':description' => $params['description'],
+                ':uploadedBy' => $params['uploaded_by']
+            ]);
+        } else {
+            $statement = $this->db->prepare('INSERT INTO media (event_id, title, description, uploaded_by, status, filename, extension, playtime_string, playtime_seconds, asset_id)'
+                                          . ' VALUES (:eventId, :title, :description, :uploadedBy, :status, :filename, :extension, :playtimeString, :playtimeSeconds, :assetId)');
+            $result = $statement->execute([
+                ':eventId' => $params['event_id'],
+                ':title' => $params['title'],
+                ':description' => $params['description'],
+                ':uploadedBy' => $params['uploaded_by'],
+                ':status' => self::STATUS_ASSET_CREATED,
+                ':filename' => $params['filename'],
+                ':extension' => $params['extension'],
+                ':playtimeString' => $params['playtime_string'],
+                ':playtimeSeconds' => $params['playtime_seconds'],
+                ':assetId' => $params['asset_id'],
+            ]);
         }
+
+        return $result;
     }
 }

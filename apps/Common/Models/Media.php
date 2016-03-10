@@ -4,7 +4,7 @@ namespace Aass\Common\Models;
 class Media extends Base
 {
     public $id;
-    public $showId;
+    public $eventId;
     public $title; // 動画名
     public $description; // 動画概要
     public $uploadedBy; // 動画登録者名
@@ -21,16 +21,22 @@ class Media extends Base
     public $jobEndAt; // ジョブ終了日時
     public $deletedAt; // 削除日時
 
-    const STATUS_UPLOADED = 'UPLOADED'; // アップロード済み(アセット作成待ち)
-    const STATUS_ASSET_CREATED = 'ASSET_CREATED'; // アセット作成済み(エンコード待ち)
-    const STATUS_JOB_CREATED = 'JOB_CREATED'; // ジョブ作成済み(エンコード中)
-    const STATUS_ENCODED = 'ENCODED'; // エンコード済み
-    const STATUS_DELETED = 'DELETED'; // 削除済み
-    const STATUS_ERROR = 'ERROR'; // エンコード失敗
+    const STATUS_ASSET_CREATED = 1; // アセット作成済み(エンコード待ち)
+    const STATUS_JOB_CREATED = 2; // ジョブ作成済み(エンコード中)
+    const STATUS_ENCODED = 3; // エンコード済み
+    const STATUS_DELETED = 4; // 削除済み
+    const STATUS_ERROR = 5; // エンコード失敗
 
-    public static function getUploadedFilePath($mediaEntity)
+    public static function status2string($status)
     {
-        $fileName = "{$mediaEntity->getRowKey()}.{$mediaEntity->getPropertyValue('Extension')}";
-        return __DIR__ . "/../../../uploads/{$fileName}";
+        $strings = [
+            self::STATUS_ASSET_CREATED => 'アップロード完了',
+            self::STATUS_JOB_CREATED => 'エンコード中',
+            self::STATUS_ENCODED => 'エンコード完了',
+            self::STATUS_DELETED => '削除済み',
+            self::STATUS_ERROR => 'エンコード失敗',
+        ];
+ 
+        return (isset($strings[$status])) ? $strings[$status] : null;
     }
 }

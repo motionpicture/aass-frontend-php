@@ -1,21 +1,21 @@
 $(function(){
     // メディアコードごとに更新ボタン
-    $('.deleteMedia').on('click', function(e){
+    $('.delete_media').on('click', function(e){
         var rootRow = $(this).parent().parent();
-        var rowKey = $('input[name="rowKey"]', rootRow).val();
+        var id = $('input[name="id"]', rootRow).val();
 
         $.ajax({
             type: 'post',
-            url: '/media/' + rowKey + '/delete',
+            url: '/media/' + id + '/delete',
             data: {},
             dataType: 'json'
         })
         .done(function(data) {
             // エラーメッセー時表示
             if (!data.isSuccess) {
-            	alert('delete fail!');
+                alert('delete fail!');
             } else {
-            	rootRow.remove();
+                rootRow.remove();
                 alert('delete success!');
             }
         })

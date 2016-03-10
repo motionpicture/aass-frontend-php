@@ -44,4 +44,10 @@ class SecurityPlugin extends Plugin
         $event = $this->session->get(self::AUTH_SESSION_NAME);
         return $event['id'];
     }
+
+    public function getUserId()
+    {
+        $event = $this->session->get(self::AUTH_SESSION_NAME);
+        return $event['user_id'];
+    }
 }

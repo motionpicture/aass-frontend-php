@@ -1,30 +1,30 @@
 $(function(){
     $('form').submit(function(){
-        var progressChecker;
-        var progressRate = $('#progressRate');
-        progressRate.html('0%');
-        $('.progress').show();
-        $('p.error').html('');
-
-        // 進捗表示
-        var name = $('#session_upload_progress_name').val();
-        var f = function(){
-            $.getJSON('/media/new/progress/' + name, function(data){
-                if (data != null) {
-                    var rate = Math.round(100 * (data['bytes_processed'] / data['content_length']));
-                    progressRate.text(rate + "%");
-                }
-
-//                if (data == null || !data['done']) {
-//                    progressChecker = setTimeout(f, 500);
-//                }
-            });
-        }
-        progressChecker = setInterval(f, 500);
-
-        var isNew = (!$('input[name="id"]', $(this)).val());
         var form = $(this);
         var formElement = form.get()[0];
+        var isNew = (!$('input[name="id"]', form).val());
+
+        if (isNew) {
+            var progressChecker;
+            var progressRate = $('#progressRate');
+            progressRate.html('0%');
+            $('.progress').show();
+
+            // 進捗表示
+            var name = $('#session_upload_progress_name').val();
+            var f = function(){
+                $.getJSON('/media/new/progress/' + name, function(data){
+                    if (data != null) {
+                        var rate = Math.round(100 * (data['bytes_processed'] / data['content_length']));
+                        progressRate.text(rate + "%");
+                    }
+                });
+            }
+
+            progressChecker = setInterval(f, 500);
+        }
+
+        $('p.error').html('');
 
         $.ajax({
             url: '/media/create',
@@ -40,14 +40,20 @@ $(function(){
                 $('p.error').append(data.messages.join('<br>'));
             } else {
                 alert('upload success!');
+                // フォームを空に
+                if (isNew) {
+                    $('input,textarea', form).val('');
+                }
             }
         })
         .fail(function() {
             alert('fail');
         })
         .always(function() {
-            $('.progress').hide();
-            clearTimeout(progressChecker);
+            if (isNew) {
+                $('.progress').hide();
+                clearTimeout(progressChecker);
+            }
         });
 
         return false;

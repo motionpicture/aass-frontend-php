@@ -2,6 +2,12 @@
 namespace Aass\Frontend\Controllers;
 
 use \Aass\Frontend\Models\Media as MediaModel;
+use \WindowsAzure\MediaServices\Models\Asset;
+use \WindowsAzure\MediaServices\Models\AccessPolicy;
+use \WindowsAzure\MediaServices\Models\Locator;
+use \WindowsAzure\MediaServices\Models\Job;
+use \WindowsAzure\MediaServices\Models\Task;
+use \WindowsAzure\MediaServices\Models\TaskOptions;
 
 class MediaController extends BaseController
 {
@@ -31,75 +37,7 @@ class MediaController extends BaseController
     }
 
     /**
-     * ファイルをアップロードする
-     * 
-     * @throws \Exception
-     */
-    public function createAction()
-    {
-        $this->response->setHeader('Content-type', 'application/json');
-
-        $isSaved = false;
-        $messages = [];
-        $defaults = [
-            ini_get('session.upload_progress.name') => '',
-            'title' => '',
-            'description' => '',
-            'uploaded_by' => '',
-        ];
-
-        $this->logger->addDebug(print_r($_POST, true));
-        $defaults = array_merge($defaults, $_POST);
-
-        if (!$defaults['title']) {
-            $messages[] = '動画名を入力してください';
-        }
-        if (!$defaults['description']) {
-            $messages[] = '動画概要を選択してください';
-        }
-        if (!$defaults['uploaded_by']) {
-            $messages[] = '動画登録者名を選択してください';
-        }
-        if ($_FILES['file']['size'] <= 0) {
-            $messages[] = 'ファイルを選択してください';
-        }
-
-        if (empty($messages)) {
-            try {
-                $userId = $this->session->get('auth')['UserId'];
-                $id = uniqid($userId);
-                $uploaddir = __DIR__ . "/../../../uploads/";
-                $fileName = basename($_FILES['file']['name']);
-                $extension = pathinfo($fileName, PATHINFO_EXTENSION);
-                $to = "{$uploaddir}{$id}.{$extension}";
-                if (!move_uploaded_file($_FILES['file']['tmp_name'], $to)) {
-                    $egl = error_get_last();
-                    $e = new \Exception("ファイルのアップロードでエラーが発生しました{$egl['message']}");
-                    throw $e;
-                }
-                chmod($to, 0644);
-
-                // メディアエンティティ作成
-                $mediaModel = new \Aass\Frontend\Models\Media;
-                if ($mediaModel->create($userId, $id, $extension, $defaults['title'], $defaults['description'], $defaults['uploadedBy'])) {
-                    $isSaved = true;
-                }
-            } catch (\Exception $e) {
-                $this->logger->addDebug(print_r($e, true));
-                $messages[] = '予期せぬエラーが発生しました';
-            }
-        }
-
-        echo json_encode([
-            'isSuccess' => $isSaved,
-            'messages' => $messages,
-        ]);
-
-        return false;
-    }
-
-    /**
-     * 動画登録
+     * 動画編集
      *
      * @throws \Exception
      */
@@ -107,10 +45,17 @@ class MediaController extends BaseController
     {
         $messages = [];
         $defaults = [
-            ini_get('session.upload_progress.name') => uniqid('newMedia'),
+            'id' => '',
+            'event_id' => $this->auth->getId(),
             'title' => '',
             'description' => '',
             'uploaded_by' => '',
+            'filename' => '',
+            'extension' => '',
+            'size' => '',
+            'playtime_string' => '',
+            'playtime_seconds' => '',
+            'asse_id' => '',
         ];
 
         if ($this->dispatcher->getParam('id')) {
@@ -128,26 +73,35 @@ class MediaController extends BaseController
     }
 
     /**
-     * メディアを更新する
-     *
+     * ファイルをアップロードする
+     * 
      * @throws \Exception
      */
-    public function updateAction()
+    public function createAction()
     {
         $this->response->setHeader('Content-type', 'application/json');
-
-        $rowKey = $this->dispatcher->getParam('rowKey');
 
         $isSaved = false;
         $messages = [];
         $defaults = [
+            'id' => '',
+            'event_id' => $this->auth->getId(),
             'title' => '',
             'description' => '',
-            'uploadedBy' => '',
+            'uploaded_by' => '',
+            'filename' => '',
+            'extension' => '',
+            'size' => '',
+            'playtime_string' => '',
+            'playtime_seconds' => '',
+            'asse_id' => '',
         ];
 
         $this->logger->addDebug(print_r($_POST, true));
+        $this->logger->addDebug(print_r($_FILES, true));
         $defaults = array_merge($defaults, $_POST);
+
+        $isNew = (!$defaults['id']);
 
         if (!$defaults['title']) {
             $messages[] = '動画名を入力してください';
@@ -155,27 +109,139 @@ class MediaController extends BaseController
         if (!$defaults['description']) {
             $messages[] = '動画概要を選択してください';
         }
-        if (!$defaults['uploadedBy']) {
+        if (!$defaults['uploaded_by']) {
             $messages[] = '動画登録者名を選択してください';
+        }
+        if ($isNew) {
+            if ($_FILES['file']['size'] <= 0) {
+                $messages[] = 'ファイルを選択してください';
+            }
         }
 
         if (empty($messages)) {
             try {
+                if ($isNew) {
+                    $defaults = array_merge($defaults, $this->createFromUpload());
+                }
+
                 $mediaModel = new MediaModel;
-                $mediaModel->update($this->session->get('auth')['UserId'], $rowKey, $defaults['title'], $defaults['description'], $defaults['uploadedBy']);
-                $isSaved = true;
+                if ($mediaModel->update($defaults)) {
+                    $isSaved = true;
+                    $this->logger->addInfo("media created.");
+                }
             } catch (\Exception $e) {
-                $this->logger->addDebug(print_r($e, true));
-                $messages[] = '予期せぬエラーが発生しました';
+                $this->logger->addError("mediaModel->create throw exception. message:{$e}");
+                $messages[] = '更新に失敗しました';
             }
         }
-    
+
         echo json_encode([
             'isSuccess' => $isSaved,
             'messages' => $messages,
         ]);
-    
+
         return false;
+    }
+
+    private function createFromUpload()
+    {
+        $params = [
+            'filename' => uniqid($this->auth->getUserId())
+        ];
+
+        try {
+            // メディアサービスへ資産としてアップロードする
+            $extension = pathinfo(basename($_FILES['file']['name']), PATHINFO_EXTENSION);
+//             $size = $_FILES['file']['size'];
+            $params['extension'] = $extension;
+            $params['asset_id'] = $this->ingestAsset($params['filename'], $_FILES['file']['tmp_name'], $extension);
+            $this->logger->addInfo("ingestAsset Success. assetId:{$params['asset_id']}");
+        } catch (\Exception $e) {
+            $this->logger->addError("fail in ingestAsset {$e}");
+            throw $e;
+        }
+
+        if (isset($params['asset_id']) && $params['asset_id']) {
+            try {
+                // 再生時間を取得
+                $getID3 = new \getID3;
+                $fileInfo = $getID3->analyze($_FILES['file']['tmp_name']);
+                if (isset($fileInfo['playtime_string'])) {
+                    $params['playtime_string'] = $fileInfo['playtime_string'];
+                }
+                if (isset($fileInfo['playtime_seconds'])) {
+                    $params['playtime_seconds'] = $fileInfo['playtime_seconds'];
+                }
+            } catch (\Exception $e) {
+                $this->logger->addError("getID3->analyze throw exception. message:{$e}");
+            }
+        }
+
+        return $params;
+    }
+
+    /**
+     * 資産をインジェストする
+     *
+     * @see http://msdn.microsoft.com/ja-jp/library/jj129593.aspx
+     * @return string
+     */
+    private function ingestAsset($filename, $path, $extension)
+    {
+        $asset = null;
+        $assetId = null;
+        $isCompleted = false;
+
+        try {
+            // 資産を作成する
+            $asset = new Asset(Asset::OPTIONS_NONE);
+            $asset->setName($filename);
+            $asset = $this->mediaService->createAsset($asset);
+            $assetId = $asset->getId();
+            $this->logger->addInfo("asset has been created. asset:{$assetId}");
+        } catch (\Exception $e) {
+            $this->logger->addError('createAsset throw exception. message:' . $e->getMessage());
+        }
+
+        if (!is_null($assetId)) {
+            $isUploaded = false;
+            try {
+                // ファイルのアップロードを実行する
+                $file = "{$filename}.{$extension}";
+                $this->logger->addInfo("creating BlockBlob... path:{$path}");
+                $content = fopen($path, 'rb');
+                $result = $this->blobService->createBlockBlob(basename($asset->getUri()), $file, $content);
+                $this->logger->addDebug('BlockBlob has been created. result:' . var_export($result, true));
+                fclose($content);
+
+                $isUploaded = true;
+            } catch (\Exception $e) {
+                $this->logger->addError("upload2storage throw exception. message:{$e}");
+            }
+            $this->logger->addInfo('isUploaded:' . var_export($isUploaded, true));
+
+            if ($isUploaded) {
+                try {
+                    // ファイル メタデータの生成
+                    $this->mediaService->createFileInfos($asset);
+
+                    // ここまできて初めて、アセットの準備が完了したことになる
+                    $isCompleted = true;
+                    $this->logger->addInfo("inputAsset has been prepared completely. asset:{$assetId}");
+                } catch (\Exception $e) {
+                    $this->logger->addError("createFileInfos throw exception. message:{$e}");
+                }
+            }
+        }
+
+        if (!$isCompleted) {
+            if (!is_null($assetId)) {
+                // TODO アセット削除
+                $assetId = null;
+            }
+        }
+
+        return $assetId;
     }
 
     /**
@@ -183,51 +249,9 @@ class MediaController extends BaseController
      */
     public function newProgressAction()
     {
-        $name = $this->dispatcher->getParam("name");
-        $key = ini_get('session.upload_progress.prefix') . $name;
-        echo isset($_SESSION[$key]) ? json_encode($_SESSION[$key]) : json_encode(null);
+        echo json_encode(null);
         return;
     }
-
-    public function updateByCodeAction($code)
-    {
-        header('Content-Type: application/json; charset=UTF-8');
-
-        $isSuccess = false;
-        $message = '予期せぬエラー';
-        $count4update = 0;
-
-        try {
-            $values = [];
-            $values['movie_name'] = $this->pdo->quote($_POST['movie_name']);
-            $values['start_at'] = $this->pdo->quote($_POST['start_at']);
-            $values['end_at'] = $this->pdo->quote($_POST['end_at']);
-
-            $query = "UPDATE media SET"
-                   . " movie_name = {$values['movie_name']}"
-                   . ", start_at = {$values['start_at']}"
-                   . ", end_at = {$values['end_at']}"
-                   . ", updated_at = datetime('now', 'localtime')"
-                   . " WHERE code = '{$code}' AND deleted_at = ''";
-            $this->app->log->debug('$query:' . $query);
-            $count4update = $this->pdo->exec($query);
-            $isSuccess = true;
-            $message = '';
-        } catch (\Exception $e) {
-            $message = $e->getMessage();
-            $this->app->log->debug('fail in updating media by code/ code:'. $code . ' / message:' . $message);
-        }
-
-        $this->app->log->debug('$count4update: ' . $count4update);
-
-        echo json_encode([
-            'success'      => $isSuccess,
-            'message'      => $message,
-            'update_count' => $count4update
-        ]);
-        return;
-    }
-
 
     /**
      * 削除する
@@ -236,18 +260,15 @@ class MediaController extends BaseController
     {
         $this->response->setHeader('Content-type', 'application/json');
 
-        $rowKey = $this->dispatcher->getParam('rowKey');
-
         $isSuccess = false;
         $message = '';
 
         try {
             $mediaModel = new MediaModel;
-            $mediaEntity = $mediaModel->deleteByRowKey($this->session->get('auth')['UserId'], $rowKey);
-            $isSuccess = true;
+            $isSuccess = $mediaModel->deleteById($this->dispatcher->getParam('id'));
         } catch (\Exception $e) {
-            $this->logger->addError('fail in deleteByRowKey. message:{$e}');
-            $message = '予期せぬエラーが発生しました';
+            $this->logger->addError("mediaModel->deleteById throw exception. message:{$e}");
+            $message = '削除に失敗しました';
         }
 
         echo json_encode([
@@ -265,52 +286,48 @@ class MediaController extends BaseController
      */
     public function downloadAction()
     {
-        $rowKey = $this->dispatcher->getParam('rowKey');
-
         try {
             $mediaModel = new MediaModel;
-            $mediaEntity = $mediaModel->getByRowKey($this->session->get('auth')['UserId'], $rowKey);
+            $media = $mediaModel->getById($this->dispatcher->getParam('id'));
 
             // 特定のAssetに対して、同時に5つを超える一意のLocatorを関連付けることはできない
             // 万が一SASロケーターがあれば削除
-            $oldLocators = $this->mediaService->getAssetLocators($mediaEntity->getPropertyValue('AssetId'));
+            $oldLocators = $this->mediaService->getAssetLocators($media['asset_id']);
             foreach ($oldLocators as $oldLocator) {
-                if ($oldLocator->getType() == WindowsAzure\MediaServices\Models\Locator::TYPE_SAS) {
+                if ($oldLocator->getType() == Locator::TYPE_SAS) {
                     // 期限切れであれば削除
                     $expiration = strtotime('+9 hours', $oldLocator->getExpirationDateTime()->getTimestamp());
                     if ($expiration < strtotime('now')) {
                         $this->mediaService->deleteLocator($oldLocator);
-                        $this->logger->addDebug('SAS locator has been deleted. $locator: '. print_r($oldLocator, true));
+                        $this->logger->addDebug('SAS locator has been deleted. locator: '. print_r($oldLocator, true));
                     }
                 }
             }
 
             // 読み取りアクセス許可を持つAccessPolicyの作成
-            $accessPolicy = new \WindowsAzure\MediaServices\Models\AccessPolicy('DownloadPolicy');
+            $accessPolicy = new AccessPolicy('DownloadPolicy');
             $accessPolicy->setDurationInMinutes(10); // 10分間有効
-            $accessPolicy->setPermissions(\WindowsAzure\MediaServices\Models\AccessPolicy::PERMISSIONS_READ);
+            $accessPolicy->setPermissions(AccessPolicy::PERMISSIONS_READ);
             $accessPolicy = $this->mediaService->createAccessPolicy($accessPolicy);
 
             // アセットを取得
-            $asset = $this->mediaService->getAsset($mediaEntity->getPropertyValue('AssetId'));
-            $this->logger->addDebug('$asset:' . print_r($asset, true));
+            $asset = $this->mediaService->getAsset($media['asset_id']);
+            $this->logger->addDebug('asset:' . print_r($asset, true));
 
             // ダウンロードURLの作成
-            $locator = new \WindowsAzure\MediaServices\Models\Locator(
+            $locator = new Locator(
                 $asset,
                 $accessPolicy,
-                \WindowsAzure\MediaServices\Models\Locator::TYPE_SAS
+                Locator::TYPE_SAS
             );
             $locator->setName('DownloadLocator_' . $asset->getId());
             $locator->setStartTime(new \DateTime('now -5 minutes'));
             $locator = $this->mediaService->createLocator($locator);
             $this->logger->addDebug(print_r($locator, true));
 
-            $fileName = sprintf('%s.%s', $mediaEntity->getRowKey(), $mediaEntity->getPropertyValue('Extension'));
-            $path = sprintf('%s/%s%s',
-                $locator->getBaseUri(),
-                $fileName,
-                $locator->getContentAccessComponent());
+            $fileName = "{$media['filename']}.{$media['extension']}";
+            $path = "{$locator->getBaseUri()}/{$fileName}{$locator->getContentAccessComponent()}";
+            $this->logger->addInfo("path:{$path}");
             header('Content-Disposition: attachment; filename="' . $fileName . '"');
             header('Content-Type: application/octet-stream');
             if (!readfile($path)) {
@@ -320,8 +337,9 @@ class MediaController extends BaseController
             // ロケーター削除
             $this->mediaService->deleteLocator($locator);
 
-            exit;
+            return false;
         } catch (\Exception $e) {
+            $this->logger->addError("download throw exception. message:{$e}");
             throw $e;
         }
 

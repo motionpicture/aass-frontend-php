@@ -10,11 +10,12 @@
     <td><?= $media['title'] ?></td>
     <td><?= $media['uploaded_by'] ?></td>
     <td><?= $media['size'] ?></td>
+    <td><?= \Aass\Frontend\Models\Media::status2string($media['status']) ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
         <a href="<?= $this->url->get(['for' => 'mediaEdit', 'id' => $media['id']]) ?>" class="">編集</a>
         <a href="<?= $this->url->get(['for' => 'mediaDownload', 'id' => $media['id']]) ?>" target="_blank" class="">ダウンロード</a>
-        <a href="javascript:void(0)" class="deleteMedia">削除</a>
+        <a href="javascript:void(0)" class="delete_media">削除</a>
         <a href="javascript:void(0)" class="">動画申請</a>
     </td>
 </tr>
