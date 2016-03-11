@@ -67,7 +67,7 @@ class Event extends \Aass\Common\Models\Event
                 ':remarks' => $params['remarks']
             ]);
         } else {
-            $statement = $this->db->prepare('INSERT INTO event (user_id, email, password, held_at, place, remarks) VALUES (:userId, :email, :password, :heldAt, :place, :remarks)');
+            $statement = $this->db->prepare('INSERT INTO event (user_id, email, password, held_at, place, remarks, created_at, updated_at) VALUES (:userId, :email, :password, :heldAt, :place, :remarks, NOW(), NOW())');
             $result = $statement->execute([
                 ':userId' => $params['user_id'],
                 ':email' => $params['email'],

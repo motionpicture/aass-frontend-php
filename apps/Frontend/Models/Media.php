@@ -52,8 +52,8 @@ class Media extends \Aass\Common\Models\Media
                 ':uploadedBy' => $params['uploadedBy']
             ]);
         } else {
-            $statement = $this->db->prepare('INSERT INTO media (event_id, title, description, uploaded_by, status, filename, size, extension, playtime_string, playtime_seconds, asset_id)'
-                                          . ' VALUES (:eventId, :title, :description, :uploadedBy, :status, :filename, :size, :extension, :playtimeString, :playtimeSeconds, :assetId)');
+            $statement = $this->db->prepare('INSERT INTO media (event_id, title, description, uploaded_by, status, filename, size, extension, playtime_string, playtime_seconds, asset_id, created_at, updated_at)'
+                                          . ' VALUES (:eventId, :title, :description, :uploadedBy, :status, :filename, :size, :extension, :playtimeString, :playtimeSeconds, :assetId, NOW(), NOW())');
             $result = $statement->execute([
                 ':eventId' => $params['eventId'],
                 ':title' => $params['title'],
