@@ -1,9 +1,8 @@
 {
     "repositories": [
         {
-            "type": "pear",
-            "url": "http://pear.php.net",
-            "vendor-alias": "pear-pear2.php.net"
+          "type": "pear",
+          "url": "http://pear.php.net"
         },
         {
             "type": "package",
@@ -21,9 +20,6 @@
     "require": {
         "swiftmailer/swiftmailer": "@stable",
         "monolog/monolog": "@stable",
-        "pear-pear2.php.net/mail_mime" : "*",
-        "pear-pear2.php.net/http_request2" : "*",
-        "pear-pear2.php.net/mail_mimedecode" : "*",
         "microsoft/windowsazure": "*",
         "jamesheinrich/getid3" : "dev-master"
     },

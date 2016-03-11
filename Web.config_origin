@@ -1,15 +1,25 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <system.webServer>
+        <security>
+            <requestFiltering>
+                <requestLimits maxAllowedContentLength="2048000000">
+                </requestLimits>
+            </requestFiltering>
+        </security>
         <rewrite>
             <rules>
                 <rule name="static files" stopProcessing="true">
                   <match url="^(.+(html|js|css|png|gif|jpg|mp3|mp4|ico))$" />
                   <action type="Rewrite" url="public/{R:1}" appendQueryString="false" />
                 </rule>
-                <rule name="index file" stopProcessing="true">
+                <rule name="backend index file" stopProcessing="true">
+                  <match url="^admin[/]*(.*)$" />
+                  <action type="Rewrite" url="public/admin/index.php?_url=/{R:1}" appendQueryString="true" />
+                </rule>
+                <rule name="frontend index file" stopProcessing="true">
                   <match url="^(.*)$" />
-                  <action type="Rewrite" url="public/index.php" appendQueryString="true" />
+                  <action type="Rewrite" url="public/index.php?_url=/{R:1}" appendQueryString="true" />
                 </rule>
             </rules>
         </rewrite>
