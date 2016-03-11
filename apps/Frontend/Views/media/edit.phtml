@@ -5,25 +5,15 @@
 <h1>動画編集</h1>
 
 <div class="progress" style="display:none;">
-    <p>アップロードしています...</p>
-    <p id="progressRate">0%</p>
+    <p id="progressText"></p>
+<!--     <p id="progressRate">0%</p> -->
 </div>
 
 <p class="error" style="color: #FF0000;"></p>
 
 <form enctype="multipart/form-data" method="POST">
     <input type="hidden" name="MAX_FILE_SIZE" value="2000000000" />
-    <?php if (!$defaults['id']) { ?>
-    <input id="session_upload_progress_name" type="hidden" name="<?= ini_get('session.upload_progress.name') ?>" value="<?= $defaults[ini_get('session.upload_progress.name')] ?>">
-    <?php } ?>
     <input type="hidden" name="id" class="" value="<?= $defaults['id'] ?>">
-    <input type="hidden" name="event_id" class="" value="<?= $defaults['event_id'] ?>">
-    <input type="hidden" name="filename" class="" value="<?= $defaults['filename'] ?>">
-    <input type="hidden" name="extension" class="" value="<?= $defaults['extension'] ?>">
-    <input type="hidden" name="size" class="" value="<?= $defaults['size'] ?>">
-    <input type="hidden" name="playtime_string" class="" value="<?= $defaults['playtime_string'] ?>">
-    <input type="hidden" name="playtime_seconds" class="" value="<?= $defaults['playtime_seconds'] ?>">
-    <input type="hidden" name="asse_id" class="" value="<?= $defaults['asse_id'] ?>">
     <div class="form-group">
         <p>
             <input type="text" name="title" class="form-control" value="<?= $defaults['title'] ?>" placeholder="動画名">
@@ -32,7 +22,7 @@
             <textarea type="text" name="description" class="form-control" placeholder="動画概要"><?= $defaults['description'] ?></textarea>
         </p>
         <p>
-            <input type="text" name="uploaded_by" class="form-control" value="<?= $defaults['uploaded_by'] ?>" placeholder="動画登録者名">
+            <input type="text" name="uploadedBy" class="form-control" value="<?= $defaults['uploadedBy'] ?>" placeholder="動画登録者名">
         </p>
         <?php if (!$defaults['id']) { ?>
         <p>

@@ -94,6 +94,7 @@ $di->set('blobService', function() use ($di)
         $di->get('config')->get('storage_account_name'),
         $di->get('config')->get('storage_account_key')
     );
+
     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService($connectionString);
 });
 ?>

@@ -49,22 +49,23 @@ class Media extends \Aass\Common\Models\Media
                 ':id' => $params['id'],
                 ':title' => $params['title'],
                 ':description' => $params['description'],
-                ':uploadedBy' => $params['uploaded_by']
+                ':uploadedBy' => $params['uploadedBy']
             ]);
         } else {
-            $statement = $this->db->prepare('INSERT INTO media (event_id, title, description, uploaded_by, status, filename, extension, playtime_string, playtime_seconds, asset_id)'
-                                          . ' VALUES (:eventId, :title, :description, :uploadedBy, :status, :filename, :extension, :playtimeString, :playtimeSeconds, :assetId)');
+            $statement = $this->db->prepare('INSERT INTO media (event_id, title, description, uploaded_by, status, filename, size, extension, playtime_string, playtime_seconds, asset_id)'
+                                          . ' VALUES (:eventId, :title, :description, :uploadedBy, :status, :filename, :size, :extension, :playtimeString, :playtimeSeconds, :assetId)');
             $result = $statement->execute([
-                ':eventId' => $params['event_id'],
+                ':eventId' => $params['eventId'],
                 ':title' => $params['title'],
                 ':description' => $params['description'],
-                ':uploadedBy' => $params['uploaded_by'],
+                ':uploadedBy' => $params['uploadedBy'],
                 ':status' => self::STATUS_ASSET_CREATED,
                 ':filename' => $params['filename'],
+                ':size' => $params['size'],
                 ':extension' => $params['extension'],
-                ':playtimeString' => $params['playtime_string'],
-                ':playtimeSeconds' => $params['playtime_seconds'],
-                ':assetId' => $params['asset_id'],
+                ':playtimeString' => null,
+                ':playtimeSeconds' => null,
+                ':assetId' => $params['assetId'],
             ]);
         }
 

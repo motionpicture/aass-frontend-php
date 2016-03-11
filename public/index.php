@@ -111,10 +111,15 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'create'
         ])->setName('mediaCreate');
 
-        $router->add('/media/new/progress/{name}', [
+        $router->add('/media/createAsset', [
             'controller' => 'media',
-            'action' => 'newProgress'
-        ])->setName('mediaNewProgress');
+            'action' => 'createAsset'
+        ])->setName('mediaCreateAsset');
+
+        $router->add('/media/appendFile', [
+            'controller' => 'media',
+            'action' => 'appendFile'
+        ])->setName('mediaAppendFile');
 
         $router->add('/media/{id}/edit', [
             'controller' => 'media',

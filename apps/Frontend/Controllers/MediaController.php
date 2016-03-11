@@ -5,9 +5,7 @@ use \Aass\Frontend\Models\Media as MediaModel;
 use \WindowsAzure\MediaServices\Models\Asset;
 use \WindowsAzure\MediaServices\Models\AccessPolicy;
 use \WindowsAzure\MediaServices\Models\Locator;
-use \WindowsAzure\MediaServices\Models\Job;
-use \WindowsAzure\MediaServices\Models\Task;
-use \WindowsAzure\MediaServices\Models\TaskOptions;
+use \WindowsAzure\Blob\Models\Block;
 
 class MediaController extends BaseController
 {
@@ -46,21 +44,21 @@ class MediaController extends BaseController
         $messages = [];
         $defaults = [
             'id' => '',
-            'event_id' => $this->auth->getId(),
             'title' => '',
             'description' => '',
-            'uploaded_by' => '',
-            'filename' => '',
-            'extension' => '',
-            'size' => '',
-            'playtime_string' => '',
-            'playtime_seconds' => '',
-            'asse_id' => '',
+            'uploadedBy' => '',
         ];
 
         if ($this->dispatcher->getParam('id')) {
             try {
                 $mediaModel = new MediaModel;
+                $media = $mediaModel->getById($this->dispatcher->getParam('id'));
+                $defaults = [
+                    'id' => $media['id'],
+                    'title' => $media['title'],
+                    'description' => $media['description'],
+                    'uploadedBy' => $media['uploaded_by'],
+                ];
                 $defaults = array_merge($defaults, $mediaModel->getById($this->dispatcher->getParam('id')));
             } catch (\Exception $e) {
                 $this->logger->addError("getById throw exception. message:{$e}");
@@ -70,6 +68,74 @@ class MediaController extends BaseController
 
         $this->view->messages = $messages;
         $this->view->defaults = $defaults;
+    }
+
+    /**
+     * アセットを作成する
+     *
+     * @throws \Exception
+     */
+    public function createAssetAction()
+    {
+        $this->response->setHeader('Content-type', 'application/json');
+
+        $isSuccess = false;
+        $messages = [];
+
+        $filename = uniqid($this->auth->getUserId());
+
+        try {
+            $assetId = $this->createAsset($filename);
+            $isSuccess = true;
+        } catch (\Exception $e) {
+            $this->logger->addError("createAsset throw exception. message:{$e}");
+            $messages[] = 'ファイルのアップロードに失敗しました';
+        }
+
+        echo json_encode([
+            'isSuccess' => $isSuccess,
+            'messages' => $messages,
+            'params' => [
+                'assetId' => $assetId,
+                'filename' => $filename,
+            ],
+        ]);
+
+        return false;
+    }
+
+    /**
+     * ファイルを追加アップロードする
+     *
+     * @throws \Exception
+     */
+    public function appendFileAction()
+    {
+        $this->response->setHeader('Content-type', 'application/json');
+
+        $isSuccess = false;
+        $messages = [];
+
+        try {
+            $dataparts = explode(',', $_POST['file'], 2);
+            $content = base64_decode($dataparts[1]);
+            $counter = $this->appendFile($_POST['assetId'], $_POST['filename'], $content, $_POST['extension'], $_POST['counter'], $_POST['eof']);
+
+            $isSuccess = true;
+        } catch (\Exception $e) {
+            $this->logger->addError("createAsset throw exception. message:{$e}");
+            $messages[] = 'ファイルのアップロードに失敗しました';
+        }
+
+        echo json_encode([
+            'isSuccess' => $isSuccess,
+            'messages' => $messages,
+            'params' => [
+                'counter' => $counter
+            ]
+        ]);
+
+        return false;
     }
 
     /**
@@ -83,54 +149,22 @@ class MediaController extends BaseController
 
         $isSaved = false;
         $messages = [];
-        $defaults = [
-            'id' => '',
-            'event_id' => $this->auth->getId(),
-            'title' => '',
-            'description' => '',
-            'uploaded_by' => '',
-            'filename' => '',
-            'extension' => '',
-            'size' => '',
-            'playtime_string' => '',
-            'playtime_seconds' => '',
-            'asse_id' => '',
-        ];
 
         $this->logger->addDebug(print_r($_POST, true));
-        $this->logger->addDebug(print_r($_FILES, true));
-        $defaults = array_merge($defaults, $_POST);
 
-        $isNew = (!$defaults['id']);
-
-        if (!$defaults['title']) {
-            $messages[] = '動画名を入力してください';
-        }
-        if (!$defaults['description']) {
-            $messages[] = '動画概要を選択してください';
-        }
-        if (!$defaults['uploaded_by']) {
-            $messages[] = '動画登録者名を選択してください';
-        }
-        if ($isNew) {
-            if ($_FILES['file']['size'] <= 0) {
-                $messages[] = 'ファイルを選択してください';
-            }
-        }
+        $isNew = (!$_POST['id']);
 
         if (empty($messages)) {
             try {
-                if ($isNew) {
-                    $defaults = array_merge($defaults, $this->createFromUpload());
-                }
-
+                $params = $_POST;
+                $params['eventId'] = $this->auth->getId();
                 $mediaModel = new MediaModel;
-                if ($mediaModel->update($defaults)) {
+                if ($mediaModel->update($params)) {
                     $isSaved = true;
-                    $this->logger->addInfo("media created.");
+                    $this->logger->addInfo("media updated.");
                 }
             } catch (\Exception $e) {
-                $this->logger->addError("mediaModel->create throw exception. message:{$e}");
+                $this->logger->addError("mediaModel->update throw exception. message:{$e}");
                 $messages[] = '更新に失敗しました';
             }
         }
@@ -143,114 +177,130 @@ class MediaController extends BaseController
         return false;
     }
 
-    private function createFromUpload()
-    {
-        $params = [
-            'filename' => uniqid($this->auth->getUserId())
-        ];
+//     private function createFromUpload($extension)
+//     {
+//         if (isset($params['asset_id']) && $params['asset_id']) {
+//             try {
+//                 // 再生時間を取得
+//                 $getID3 = new \getID3;
+//                 $fileInfo = $getID3->analyze($_FILES['file']['tmp_name']);
+//                 if (isset($fileInfo['playtime_string'])) {
+//                     $params['playtime_string'] = $fileInfo['playtime_string'];
+//                 }
+//                 if (isset($fileInfo['playtime_seconds'])) {
+//                     $params['playtime_seconds'] = $fileInfo['playtime_seconds'];
+//                 }
+//             } catch (\Exception $e) {
+//                 $this->logger->addError("getID3->analyze throw exception. message:{$e}");
+//             }
+//         }
 
-        try {
-            // メディアサービスへ資産としてアップロードする
-            $extension = pathinfo(basename($_FILES['file']['name']), PATHINFO_EXTENSION);
-//             $size = $_FILES['file']['size'];
-            $params['extension'] = $extension;
-            $params['asset_id'] = $this->ingestAsset($params['filename'], $_FILES['file']['tmp_name'], $extension);
-            $this->logger->addInfo("ingestAsset Success. assetId:{$params['asset_id']}");
-        } catch (\Exception $e) {
-            $this->logger->addError("fail in ingestAsset {$e}");
-            throw $e;
-        }
+//         return $params;
+//     }
 
-        if (isset($params['asset_id']) && $params['asset_id']) {
-            try {
-                // 再生時間を取得
-                $getID3 = new \getID3;
-                $fileInfo = $getID3->analyze($_FILES['file']['tmp_name']);
-                if (isset($fileInfo['playtime_string'])) {
-                    $params['playtime_string'] = $fileInfo['playtime_string'];
-                }
-                if (isset($fileInfo['playtime_seconds'])) {
-                    $params['playtime_seconds'] = $fileInfo['playtime_seconds'];
-                }
-            } catch (\Exception $e) {
-                $this->logger->addError("getID3->analyze throw exception. message:{$e}");
-            }
-        }
-
-        return $params;
-    }
-
-    /**
-     * 資産をインジェストする
-     *
-     * @see http://msdn.microsoft.com/ja-jp/library/jj129593.aspx
-     * @return string
-     */
-    private function ingestAsset($filename, $path, $extension)
+    private function appendFile($assetId, $filename, $content, $extension, $counter, $eof)
     {
         $asset = null;
-        $assetId = null;
-        $isCompleted = false;
+        $isComitted = false;
+
+        $this->logger->addInfo("appending file... {$assetId}/{$filename}");
 
         try {
-            // 資産を作成する
-            $asset = new Asset(Asset::OPTIONS_NONE);
-            $asset->setName($filename);
-            $asset = $this->mediaService->createAsset($asset);
-            $assetId = $asset->getId();
-            $this->logger->addInfo("asset has been created. asset:{$assetId}");
+            $asset = $this->mediaService->getAsset($assetId);
         } catch (\Exception $e) {
-            $this->logger->addError('createAsset throw exception. message:' . $e->getMessage());
+            $this->logger->addError("getAsset throw exception. message:{$e}");
         }
 
-        if (!is_null($assetId)) {
-            $isUploaded = false;
+        if ($asset) {
+            $blob = "{$filename}.{$extension}";
+
             try {
-                // ファイルのアップロードを実行する
-                $file = "{$filename}.{$extension}";
-                $this->logger->addInfo("creating BlockBlob... path:{$path}");
-                $content = fopen($path, 'rb');
-                $result = $this->blobService->createBlockBlob(basename($asset->getUri()), $file, $content);
-                $this->logger->addDebug('BlockBlob has been created. result:' . var_export($result, true));
-                fclose($content);
+                $end = 0;
+                $body = '';
+                // if threshold is lower than 4mb, honor threshold, else use 4mb
+//                 $blockSize = ($this->_SingleBlobUploadThresholdInBytes < 4194304) ? $this->_SingleBlobUploadThresholdInBytes : 4194304;
+                $blockSize = 1024*1024;
+                while(!$end) {
+                    $this->logger->addDebug("counter:{$counter}");
 
-                $isUploaded = true;
+                    if (is_resource($content)) {
+                        $this->logger->addDebug('reaing file...');
+                        $body = fread($content, $blockSize);
+                        if (feof($content)) {
+                            $end = 1;
+                        }
+                    } else {
+                        $this->logger->addDebug('content size:' . strlen($content));
+                        if (strlen($content) <= $blockSize) {
+                            $body = $content;
+                            $end = 1;
+                        } else {
+                            $body = substr($content, 0, $blockSize);
+                            $content = substr_replace($content, '', 0, $blockSize);
+                        }
+                    }
+
+                    $block = new Block();
+                    $block->setBlockId(base64_encode(str_pad($counter++, '0', 6)));
+                    $block->setType('Uncommitted');
+                    $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
+                    $this->logger->addDebug("BlobBlock created. blockId:{$block->getBlockId()}");
+                }
+
+                // 最後のファイル追加であればコミット
+                if ($eof) {
+                    $blockIds  = [];
+                    for ($i=0; $i<$counter; $i++) {
+                        $block = new Block();
+                        $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
+                        $block->setType('Uncommitted');
+                        $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+                        array_push($blockIds, $block);
+                    }
+                    $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
+                    $this->logger->addInfo('BlobBlocks commited.');
+                    $isComitted = true;
+                }
             } catch (\Exception $e) {
-                $this->logger->addError("upload2storage throw exception. message:{$e}");
+                $this->logger->addError("createBlobBlock throw exception. message:{$e}");
             }
-            $this->logger->addInfo('isUploaded:' . var_export($isUploaded, true));
 
-            if ($isUploaded) {
+            if ($isComitted) {
                 try {
                     // ファイル メタデータの生成
                     $this->mediaService->createFileInfos($asset);
-
                     // ここまできて初めて、アセットの準備が完了したことになる
-                    $isCompleted = true;
-                    $this->logger->addInfo("inputAsset has been prepared completely. asset:{$assetId}");
+                    $this->logger->addInfo("inputAsset prepared completely. asset:{$assetId}");
                 } catch (\Exception $e) {
                     $this->logger->addError("createFileInfos throw exception. message:{$e}");
                 }
             }
         }
 
-        if (!$isCompleted) {
-            if (!is_null($assetId)) {
-                // TODO アセット削除
-                $assetId = null;
-            }
-        }
-
-        return $assetId;
+        return $counter;
     }
 
     /**
-     * 動画アップロード進捗を取得する
+     * アセットを作成する
+     * 
+     * @param string $filename
+     * @param string $extension
      */
-    public function newProgressAction()
+    private function createAsset($filename)
     {
-        echo json_encode(null);
-        return;
+        $assetId = null;
+
+        try {
+            $asset = new Asset(Asset::OPTIONS_NONE);
+            $asset->setName($filename);
+            $asset = $this->mediaService->createAsset($asset);
+            $assetId = $asset->getId();
+            $this->logger->addInfo("asset has been created. asset:" . var_export($asset, true));
+        } catch (\Exception $e) {
+            $this->logger->addError('createAsset throw exception. message:' . $e->getMessage());
+        }
+
+        return $assetId;
     }
 
     /**
