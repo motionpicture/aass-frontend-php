@@ -123,7 +123,7 @@ class MediaController extends BaseController
 
             $isSuccess = true;
         } catch (\Exception $e) {
-            $this->logger->addError("createAsset throw exception. message:{$e}");
+            $this->logger->addError("appendFile throw exception. message:{$e}");
             $messages[] = 'ファイルのアップロードに失敗しました';
         }
 
@@ -205,75 +205,62 @@ class MediaController extends BaseController
 
         $this->logger->addInfo("appending file... {$assetId}/{$filename}");
 
-        try {
-            $asset = $this->mediaService->getAsset($assetId);
-        } catch (\Exception $e) {
-            $this->logger->addError("getAsset throw exception. message:{$e}");
-        }
+        $asset = $this->mediaService->getAsset($assetId);
 
         if ($asset) {
             $blob = "{$filename}.{$extension}";
 
-            try {
-                $end = 0;
-                $body = '';
-                // if threshold is lower than 4mb, honor threshold, else use 4mb
-//                 $blockSize = ($this->_SingleBlobUploadThresholdInBytes < 4194304) ? $this->_SingleBlobUploadThresholdInBytes : 4194304;
-                $blockSize = 1024*1024;
-                while(!$end) {
-                    $this->logger->addDebug("counter:{$counter}");
+            $end = 0;
+            $body = '';
+            // if threshold is lower than 4mb, honor threshold, else use 4mb
+            $blockSize = 1024*1024;
+            while(!$end) {
+                $this->logger->addDebug("counter:{$counter}");
 
-                    if (is_resource($content)) {
-                        $this->logger->addDebug('reaing file...');
-                        $body = fread($content, $blockSize);
-                        if (feof($content)) {
-                            $end = 1;
-                        }
+                if (is_resource($content)) {
+                    $this->logger->addDebug('reaing file...');
+                    $body = fread($content, $blockSize);
+                    if (feof($content)) {
+                        $end = 1;
+                    }
+                } else {
+                    $this->logger->addDebug('content size:' . strlen($content));
+                    if (strlen($content) <= $blockSize) {
+                        $body = $content;
+                        $end = 1;
                     } else {
-                        $this->logger->addDebug('content size:' . strlen($content));
-                        if (strlen($content) <= $blockSize) {
-                            $body = $content;
-                            $end = 1;
-                        } else {
-                            $body = substr($content, 0, $blockSize);
-                            $content = substr_replace($content, '', 0, $blockSize);
-                        }
+                        $body = substr($content, 0, $blockSize);
+                        $content = substr_replace($content, '', 0, $blockSize);
                     }
+                }
 
+                $block = new Block();
+                $block->setBlockId(base64_encode(str_pad($counter++, '0', 6)));
+                $block->setType('Uncommitted');
+                $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
+                $this->logger->addInfo("BlobBlock created. blockId:{$block->getBlockId()}");
+            }
+
+            // 最後のファイル追加であればコミット
+            if ($eof) {
+                $blockIds  = [];
+                for ($i=0; $i<$counter; $i++) {
                     $block = new Block();
-                    $block->setBlockId(base64_encode(str_pad($counter++, '0', 6)));
+                    $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
                     $block->setType('Uncommitted');
-                    $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
-                    $this->logger->addDebug("BlobBlock created. blockId:{$block->getBlockId()}");
+                    $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+                    array_push($blockIds, $block);
                 }
-
-                // 最後のファイル追加であればコミット
-                if ($eof) {
-                    $blockIds  = [];
-                    for ($i=0; $i<$counter; $i++) {
-                        $block = new Block();
-                        $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
-                        $block->setType('Uncommitted');
-                        $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-                        array_push($blockIds, $block);
-                    }
-                    $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
-                    $this->logger->addInfo('BlobBlocks commited.');
-                    $isComitted = true;
-                }
-            } catch (\Exception $e) {
-                $this->logger->addError("createBlobBlock throw exception. message:{$e}");
+                $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
+                $this->logger->addInfo('BlobBlocks commited.');
+                $isComitted = true;
             }
 
             if ($isComitted) {
-                try {
-                    // ファイル メタデータの生成
-                    $this->mediaService->createFileInfos($asset);
-                    // ここまできて初めて、アセットの準備が完了したことになる
-                    $this->logger->addInfo("inputAsset prepared completely. asset:{$assetId}");
-                } catch (\Exception $e) {
-                    $this->logger->addError("createFileInfos throw exception. message:{$e}");
-                }
+                // ファイル メタデータの生成
+                $this->mediaService->createFileInfos($asset);
+                // ここまできて初めて、アセットの準備が完了したことになる
+                $this->logger->addInfo("inputAsset prepared completely. asset:{$assetId}");
             }
         }
 
@@ -288,17 +275,11 @@ class MediaController extends BaseController
      */
     private function createAsset($filename)
     {
-        $assetId = null;
-
-        try {
-            $asset = new Asset(Asset::OPTIONS_NONE);
-            $asset->setName($filename);
-            $asset = $this->mediaService->createAsset($asset);
-            $assetId = $asset->getId();
-            $this->logger->addInfo("asset has been created. asset:" . var_export($asset, true));
-        } catch (\Exception $e) {
-            $this->logger->addError('createAsset throw exception. message:' . $e->getMessage());
-        }
+        $asset = new Asset(Asset::OPTIONS_NONE);
+        $asset->setName($filename);
+        $asset = $this->mediaService->createAsset($asset);
+        $assetId = $asset->getId();
+        $this->logger->addInfo("asset has been created. asset:" . var_export($asset, true));
 
         return $assetId;
     }

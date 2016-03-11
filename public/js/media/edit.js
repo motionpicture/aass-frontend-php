@@ -144,7 +144,12 @@ $(function(){
         var createMedia = function()
         {
             progressText.append('<br>DBに登録します...');
-            var formData = new FormData(formElement);
+            var formData = new FormData();
+
+            formData.append('id', $('input[name="id"]', form).val());
+            formData.append('title', $('input[name="title"]', form).val());
+            formData.append('description', $('textarea[name="description"]', form).val());
+            formData.append('uploadedBy', $('input[name="uploadedBy"]', form).val());
 
             if (isNew) {
                 formData.append('extension', extension);
