@@ -213,7 +213,7 @@ class MediaController extends BaseController
             $end = 0;
             $body = '';
             // if threshold is lower than 4mb, honor threshold, else use 4mb
-            $blockSize = 1024*1024;
+            $blockSize = 4194304;
             while(!$end) {
                 $this->logger->addDebug("counter:{$counter}");
 
