@@ -10,7 +10,7 @@ use \WindowsAzure\Blob\Models\Block;
 class MediaController extends BaseController
 {
     const BLOCK_ID_PREFIX = 'block-';
-    const MAX_BLOCK_SIZE = 4194304; // 4 Mb
+    const MAX_BLOCK_SIZE = 4194304; // 最大で4MB
     const BLOCK_ID_PADDING = 6;
 
     public function indexAction()
@@ -245,26 +245,6 @@ class MediaController extends BaseController
                 $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
                 $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
                 $counter++;
-
-                // TODO 100ずつコミット?
-                /*
-                if ($uncommitedCount > 99 || $end) {
-                    $comittedCount = $counter - $uncommitedCount;
-
-                    $blockIds  = [];
-                    for ($i=0; $i<$counter; $i++) {
-                        $block = new Block();
-                        $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
-                        $type = ($counter < $comittedCount) ? 'Committed' : 'Uncommitted';
-                        $block->setType($type);
-                        $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-                        array_push($blockIds, $block);
-                    }
-                    $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
-                    $this->logger->addInfo('BlobBlocks commited.');
-                    $uncommitedCount = 0;
-                }
-                */
             }
 
             // 最後のファイル追加であればコミット
@@ -276,7 +256,7 @@ class MediaController extends BaseController
                     $block->setBlockId($blockId);
                     $block->setType('Uncommitted');
                     $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-                    array_push($blockIds, $block);
+                    $blockIds[] = $block;
                 }
                 $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
                 $this->logger->addInfo('BlobBlocks commited.');
@@ -295,6 +275,11 @@ class MediaController extends BaseController
         return $counter;
     }
 
+    /**
+     * ブロブブロックIDを生成する
+     * 
+     * @param int $blockCount
+     */
     private function generateBlockId($blockCount)
     {
         return base64_encode(self::BLOCK_ID_PREFIX . str_pad($blockCount, self::BLOCK_ID_PADDING, '0', STR_PAD_LEFT));
