@@ -212,10 +212,13 @@ class MediaController extends BaseController
 
             $end = 0;
             $body = '';
+            $uncommitedCount = 0;
             // if threshold is lower than 4mb, honor threshold, else use 4mb
-            $blockSize = 4194304;
+//             $blockSize = 4194304;
+            $blockSize = 1024;
             while(!$end) {
-                $this->logger->addDebug("counter:{$counter}");
+                $uncommitedCount++;
+                $this->logger->addInfo("counter:{$counter}");
 
                 if (is_resource($content)) {
                     $this->logger->addDebug('reaing file...');
@@ -235,43 +238,45 @@ class MediaController extends BaseController
                 }
 
                 $block = new Block();
-                $block->setBlockId(base64_encode(str_pad($counter++, '0', 6)));
+                $block->setBlockId(base64_encode(str_pad($counter++, '0', 8)));
                 $block->setType('Uncommitted');
                 $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
                 $this->logger->addInfo("BlobBlock created. blockId:{$block->getBlockId()}");
-            }
 
-            // TODO 100ブロックずつコミット？
-            /*
-            if ($counter > 0 && $counter % 100 == 0) {
-                $comittedCount = $counter - 100;
+                // TODO 100ずつコミット?
+                /*
+                if ($uncommitedCount > 99 || $end) {
+                    $comittedCount = $counter - $uncommitedCount;
 
-                $blockIds  = [];
-                for ($i=0; $i<$counter; $i++) {
-                    $block = new Block();
-                    $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
-                    $type = ($counter < $comittedCount) ? 'Committed' : 'Uncommitted';
-                    $block->setType($type);
-                    $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-                    array_push($blockIds, $block);
+                    $blockIds  = [];
+                    for ($i=0; $i<$counter; $i++) {
+                        $block = new Block();
+                        $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
+                        $type = ($counter < $comittedCount) ? 'Committed' : 'Uncommitted';
+                        $block->setType($type);
+                        $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+                        array_push($blockIds, $block);
+                    }
+                    $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
+                    $this->logger->addInfo('BlobBlocks commited.');
+                    $uncommitedCount = 0;
                 }
-                $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
-                $this->logger->addInfo('BlobBlocks commited.');
+                */
             }
-            */
 
             // 最後のファイル追加であればコミット
             if ($eof) {
                 $blockIds  = [];
                 for ($i=0; $i<$counter; $i++) {
                     $block = new Block();
-                    $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
+                    $block->setBlockId(base64_encode(str_pad($i, '0', 8)));
                     $block->setType('Uncommitted');
                     $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
                     array_push($blockIds, $block);
                 }
                 $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
                 $this->logger->addInfo('BlobBlocks commited.');
+
                 $isComitted = true;
             }
 
