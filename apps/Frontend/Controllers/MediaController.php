@@ -9,6 +9,10 @@ use \WindowsAzure\Blob\Models\Block;
 
 class MediaController extends BaseController
 {
+    const BLOCK_ID_PREFIX = 'block-';
+    const MAX_BLOCK_SIZE = 4194304; // 4 Mb
+    const BLOCK_ID_PADDING = 6;
+
     public function indexAction()
     {
         try {
@@ -214,8 +218,7 @@ class MediaController extends BaseController
             $body = '';
             $uncommitedCount = 0;
             // if threshold is lower than 4mb, honor threshold, else use 4mb
-//             $blockSize = 4194304;
-            $blockSize = 1024;
+            $blockSize = self::MAX_BLOCK_SIZE;
             while(!$end) {
                 $uncommitedCount++;
                 $this->logger->addInfo("counter:{$counter}");
@@ -237,13 +240,11 @@ class MediaController extends BaseController
                     }
                 }
 
-                $blockId = base64_encode(str_pad($counter++, '0', 8));
-//                 $block = new Block();
-//                 $block->setBlockId($blockId);
-//                 $block->setType('Uncommitted');
+                $blockId = $this->generateBlockId($counter);
                 $this->logger->addInfo("creating BlobBlock... blockId:{$blockId}");
                 $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
                 $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
+                $counter++;
 
                 // TODO 100ずつコミット?
                 /*
@@ -270,7 +271,7 @@ class MediaController extends BaseController
             if ($eof) {
                 $blockIds  = [];
                 for ($i=0; $i<$counter; $i++) {
-                    $blockId = base64_encode(str_pad($i, '0', 8));
+                    $blockId = $this->generateBlockId($i);
                     $block = new Block();
                     $block->setBlockId($blockId);
                     $block->setType('Uncommitted');
@@ -292,6 +293,11 @@ class MediaController extends BaseController
         }
 
         return $counter;
+    }
+
+    private function generateBlockId($blockCount)
+    {
+        return base64_encode(self::BLOCK_ID_PREFIX . str_pad($blockCount, self::BLOCK_ID_PADDING, '0', STR_PAD_LEFT));
     }
 
     /**
