@@ -237,11 +237,13 @@ class MediaController extends BaseController
                     }
                 }
 
-                $block = new Block();
-                $block->setBlockId(base64_encode(str_pad($counter++, '0', 8)));
-                $block->setType('Uncommitted');
-                $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
-                $this->logger->addInfo("BlobBlock created. blockId:{$block->getBlockId()}");
+                $blockId = base64_encode(str_pad($counter++, '0', 8));
+//                 $block = new Block();
+//                 $block->setBlockId($blockId);
+//                 $block->setType('Uncommitted');
+                $this->logger->addInfo("creating BlobBlock... blockId:{$blockId}");
+                $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
+                $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
 
                 // TODO 100ずつコミット?
                 /*
@@ -268,8 +270,9 @@ class MediaController extends BaseController
             if ($eof) {
                 $blockIds  = [];
                 for ($i=0; $i<$counter; $i++) {
+                    $blockId = base64_encode(str_pad($i, '0', 8));
                     $block = new Block();
-                    $block->setBlockId(base64_encode(str_pad($i, '0', 8)));
+                    $block->setBlockId($blockId);
                     $block->setType('Uncommitted');
                     $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
                     array_push($blockIds, $block);
