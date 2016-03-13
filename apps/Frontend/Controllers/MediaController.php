@@ -213,7 +213,8 @@ class MediaController extends BaseController
             $end = 0;
             $body = '';
             // if threshold is lower than 4mb, honor threshold, else use 4mb
-            $blockSize = 4194304;
+//             $blockSize = 4194304;
+            $blockSize = 1024;
             while(!$end) {
                 $this->logger->addDebug("counter:{$counter}");
 
@@ -240,6 +241,25 @@ class MediaController extends BaseController
                 $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $block->getBlockId(), $body);
                 $this->logger->addInfo("BlobBlock created. blockId:{$block->getBlockId()}");
             }
+
+            // TODO 100ブロックずつコミット？
+            /*
+            if ($counter > 0 && $counter % 100 == 0) {
+                $comittedCount = $counter - 100;
+
+                $blockIds  = [];
+                for ($i=0; $i<$counter; $i++) {
+                    $block = new Block();
+                    $block->setBlockId(base64_encode(str_pad($i, '0', 6)));
+                    $type = ($counter < $comittedCount) ? 'Committed' : 'Uncommitted';
+                    $block->setType($type);
+                    $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+                    array_push($blockIds, $block);
+                }
+                $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
+                $this->logger->addInfo('BlobBlocks commited.');
+            }
+            */
 
             // 最後のファイル追加であればコミット
             if ($eof) {
