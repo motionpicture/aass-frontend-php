@@ -6,8 +6,10 @@ var MediaEdit = {
     assetId: null,
     filename: null,
     chunkSize: 1024 * 1024, // byte
-    createBlobBlockSuccessCount: 0,
     division: null,
+    createBlobBlockSuccessCount: 0,
+    createBlobBlockAjaxes: [],
+    createBlobBlockTimer: null,
 
     initialize: function()
     {
@@ -78,7 +80,7 @@ var MediaEdit = {
         formData.append('filename', self.filename);
         formData.append('index', blockIndex);
 
-        $.ajax({
+        self.createBlobBlockAjaxes[] = $.ajax({
             url: '/media/appendFile',
             method: 'post',
             dataType: 'json',
@@ -94,7 +96,8 @@ var MediaEdit = {
                 // 結果保存
                 self.createBlobBlockSuccessCount++;
                 console.log('createBlobBlockSuccessCount:' + self.createBlobBlockSuccessCount);
-                self.showProgress(self.createBlobBlockSuccessCount + '/' + self.division + 'をアップロードしました...');
+                var rate = Math.floor(self.createBlobBlockSuccessCount * 100 / self.division);
+                self.showProgress(rate + '%をアップロードしました...');
 
                 // ブロブブロックを全て作成したらコミット
                 if (self.createBlobBlockSuccessCount == self.division) {
@@ -104,6 +107,13 @@ var MediaEdit = {
             }
         })
         .fail(function() {
+            // タイマークリア
+            clearInterval(self.createBlobBlockTimer);
+            // ブロック作成リクエストをキャンセル
+            $.each(self.createBlobBlockAjaxes, function(key, value) {
+                value.abort();
+            });
+
             alert('fail');
         })
         .always(function() {
@@ -172,7 +182,7 @@ var MediaEdit = {
 
                 // 定期的にブロブブロック作成
                 var index = 0;
-                var timer = setInterval(function()
+                self.createBlobBlockTimer = setInterval(function()
                 {
                     // 回線が遅い場合、アクセスがたまりすぎないように調整
                     if (index - self.createBlobBlockSuccessCount > 10) {
@@ -183,7 +193,7 @@ var MediaEdit = {
                         self.loadFile(self, index);
                         index++;
                     } else {
-                        clearInterval(timer);
+                        clearInterval(self.createBlobBlockTimer);
                     }
                 }, 500);
             }
