@@ -6,7 +6,7 @@ var MediaEdit = {
     assetId: null,
     filename: null,
     chunkSize: 1024 * 1024, // byte
-    index: 0,
+//    index: 0,
     createBlobBlockSuccessCount: 0,
     division: null,
 
@@ -30,11 +30,11 @@ var MediaEdit = {
         $('#progressText').html(text);
     },
 
-    loadFile: function(context)
+    loadFile: function(context, index)
     {
         var self = context;
 
-        var readPos = self.chunkSize * self.index;
+        var readPos = self.chunkSize * index;
         var endPos = readPos + self.chunkSize;
         if (endPos > self.size) {
             endPos = self.size;
@@ -61,16 +61,15 @@ var MediaEdit = {
         {
             // ステータスチェック
             if (e.target.readyState == FileReader.DONE) { // DONE == 2
-                self.createBlobBlock(e.target.result, self.index);
+                self.createBlobBlock(e.target.result, index);
 
-                if (self.index < self.division - 1) {
-                    // 次のブロック
-                    setTimeout(function()
-                    {
-                        self.index++;
-                        self.loadFile(self);
-                    }, 1000);
-                }
+//                if (self.index < self.division - 1) {
+//                    setTimeout(function()
+//                    {
+//                        self.index++;
+//                        self.loadFile(self);
+//                    }, 500);
+//                }
             }
         }
 
@@ -181,7 +180,17 @@ var MediaEdit = {
                 self.filename = data.params.filename;
 
                 // 定期的にブロブブロック作成
-                self.loadFile(self);
+                var index = 0;
+                var timer = setInterval(function()
+                {
+                	if (index < self.division) {
+                        self.loadFile(self, index);
+                        index++;
+                	} else {
+                        clearInterval(timer);
+                	}
+                }, 500);
+//                self.loadFile(self);
             }
         })
         .fail(function() {
