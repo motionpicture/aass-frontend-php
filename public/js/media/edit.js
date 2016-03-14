@@ -5,10 +5,10 @@ var MediaEdit = {
     size: null,
     assetId: null,
     filename: null,
-    eof: false,
-    chunkSize: 2048 * 2048, // byte
-    counter: 0,
+    chunkSize: 1024 * 1024, // byte
     index: 0,
+    createBlobBlockSuccessCount: 0,
+    division: null,
 
     initialize: function()
     {
@@ -20,6 +20,7 @@ var MediaEdit = {
             f = this.file.name.split('.');
             this.extension = f[f.length-1];
             this.size = this.file.size;
+            this.division = Math.ceil(this.size / this.chunkSize);
             console.log(this.file, this.extension, this.size);
         }
     },
@@ -32,11 +33,11 @@ var MediaEdit = {
     loadFile: function()
     {
         var self = this;
+
         var readPos = self.chunkSize * self.index;
         var endPos = readPos + self.chunkSize;
         if (endPos > self.size) {
             endPos = self.size;
-            self.eof = true;
         }
 
         var blob;
@@ -60,27 +61,29 @@ var MediaEdit = {
         {
             // ステータスチェック
             if (e.target.readyState == FileReader.DONE) { // DONE == 2
-                self.onFileReaderLoadend(e.target.result);
+                self.createBlobBlock(e.target.result, self.index);
+
+                if (self.index < self.division - 1) {
+                    // 次のブロック
+                    self.index++;
+                    self.loadFile();
+                }
             }
         }
 
         fileReader.readAsDataURL(blob);
     },
 
-    onFileReaderLoadend: function(fileData)
+    createBlobBlock: function(fileData, blockIndex)
     {
         var self = this;
-        var division = Math.ceil(self.size / self.chunkSize);
-        self.showProgress((self.index + 1) + '/' + division + 'をアップロードしています...');
 
         var formData = new FormData();
         formData.append('file', fileData);
         formData.append('extension', self.extension);
-        formData.append('size', self.size);
         formData.append('assetId', self.assetId);
         formData.append('filename', self.filename);
-        formData.append('counter', self.counter);
-        formData.append('eof', Number(self.eof));
+        formData.append('index', blockIndex);
 
         $.ajax({
             url: '/media/appendFile',
@@ -95,18 +98,53 @@ var MediaEdit = {
             if (!data.isSuccess) {
                 $('p.error').append(data.messages.join('<br>'));
             } else {
-                if (self.eof) {
-                    self.showProgress('ファイルアップロード完了');
+                // 結果保存
+                self.createBlobBlockSuccessCount++;
+                console.log('createBlobBlockSuccessCount:' + self.createBlobBlockSuccessCount);
+                self.showProgress(createBlobBlockSuccessCount + '/' + self.division + 'をアップロードしました...');
 
-                    // DB登録
-                    self.createMedia();
-                } else {
-                    console.log('conuter:' + data.params.counter);
-                    // 次のファイルパーツへ
-                    self.counter = data.params.counter;
-                    self.index++;
-                    self.loadFile();
+                // ブロブブロックを全て作成したらコミット
+                if (self.createBlobBlockSuccessCount == self.division) {
+                    // コミット
+                    self.commitFile();
                 }
+            }
+        })
+        .fail(function() {
+            alert('fail');
+        })
+        .always(function() {
+        });
+    },
+
+    commitFile: function()
+    {
+        var self = this;
+        self.showProgress('ブロブブロックをコミットします...');
+
+        var formData = new FormData();
+        formData.append('extension', self.extension);
+        formData.append('assetId', self.assetId);
+        formData.append('filename', self.filename);
+        formData.append('blockCount', self.division);
+
+        $.ajax({
+            url: '/media/commitFile',
+            method: 'post',
+            dataType: 'json',
+            data: formData,
+            processData: false, // Ajaxがdataを整形しない指定
+            contentType: false // contentTypeもfalseに指定
+        })
+        .done(function(data) {
+            // エラーメッセー時表示
+            if (!data.isSuccess) {
+                $('p.error').append(data.messages.join('<br>'));
+            } else {
+                self.showProgress('ファイルアップロード完了');
+
+                // DB登録
+                self.createMedia();
             }
         })
         .fail(function() {
@@ -138,6 +176,8 @@ var MediaEdit = {
                 console.log(data.params);
                 self.assetId = data.params.assetId;
                 self.filename = data.params.filename;
+
+                // 定期的にブロブブロック作成
                 self.loadFile();
             }
         })

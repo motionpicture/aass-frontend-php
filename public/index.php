@@ -121,6 +121,11 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'appendFile'
         ])->setName('mediaAppendFile');
 
+        $router->add('/media/commitFile', [
+            'controller' => 'media',
+            'action' => 'commitFile'
+        ])->setName('mediaCommitFile');
+
         $router->add('/media/{id}/edit', [
             'controller' => 'media',
             'action' => 'edit'
