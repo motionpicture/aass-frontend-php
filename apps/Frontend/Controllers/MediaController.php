@@ -283,12 +283,12 @@ class MediaController extends BaseController
 
             // 最後のファイル追加であればコミット
             $blockIds  = [];
-            for ($i=0; $i<=$blockCount; $i++) {
+            for ($i=0; $i<$blockCount; $i++) {
                 $blockId = $this->generateBlockId($i);
                 $block = new Block();
                 $block->setBlockId($blockId);
                 $block->setType('Uncommitted');
-                $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+                $this->logger->addInfo("comitting... blockId:{$block->getBlockId()}");
                 $blockIds[] = $block;
             }
             $response = $this->blobService->commitBlobBlocks(basename($asset->getUri()), $blob, $blockIds);
