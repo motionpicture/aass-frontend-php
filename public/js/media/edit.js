@@ -6,7 +6,6 @@ var MediaEdit = {
     assetId: null,
     filename: null,
     chunkSize: 1024 * 1024, // byte
-//    index: 0,
     createBlobBlockSuccessCount: 0,
     division: null,
 
@@ -62,14 +61,6 @@ var MediaEdit = {
             // ステータスチェック
             if (e.target.readyState == FileReader.DONE) { // DONE == 2
                 self.createBlobBlock(e.target.result, index);
-
-//                if (self.index < self.division - 1) {
-//                    setTimeout(function()
-//                    {
-//                        self.index++;
-//                        self.loadFile(self);
-//                    }, 500);
-//                }
             }
         }
 
@@ -183,14 +174,18 @@ var MediaEdit = {
                 var index = 0;
                 var timer = setInterval(function()
                 {
-                	if (index < self.division) {
+                    // 回線が遅い場合、アクセスがたまりすぎないように調整
+                    if (index - self.createBlobBlockSuccessCount > 10) {
+                        return;
+                    }
+
+                    if (index < self.division) {
                         self.loadFile(self, index);
                         index++;
-                	} else {
+                    } else {
                         clearInterval(timer);
-                	}
+                    }
                 }, 500);
-//                self.loadFile(self);
             }
         })
         .fail(function() {
