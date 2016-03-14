@@ -235,35 +235,23 @@ class MediaController extends BaseController
         if ($asset) {
             $blob = "{$filename}.{$extension}";
 
-            $end = 0;
             $body = '';
             // if threshold is lower than 4mb, honor threshold, else use 4mb
             $blockSize = self::MAX_BLOCK_SIZE;
-            while(!$end) {
-                $this->logger->addInfo("blockIndex:{$blockIndex}");
+            $this->logger->addInfo("blockIndex:{$blockIndex}");
 
-                if (is_resource($content)) {
-                    $this->logger->addDebug('reaing file...');
-                    $body = fread($content, $blockSize);
-                    if (feof($content)) {
-                        $end = 1;
-                    }
-                } else {
-                    $this->logger->addDebug('content size:' . strlen($content));
-                    if (strlen($content) <= $blockSize) {
-                        $body = $content;
-                        $end = 1;
-                    } else {
-                        $body = substr($content, 0, $blockSize);
-                        $content = substr_replace($content, '', 0, $blockSize);
-                    }
-                }
-
-                $blockId = $this->generateBlockId($blockIndex);
-                $this->logger->addInfo("creating BlobBlock... blockId:{$blockId}");
-                $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
-                $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
+            if (is_resource($content)) {
+                $this->logger->addDebug('reaing file...');
+                $body = fread($content, $blockSize);
+            } else {
+                $this->logger->addDebug('content size:' . strlen($content));
+                $body = $content;
             }
+
+            $blockId = $this->generateBlockId($blockIndex);
+            $this->logger->addInfo("creating BlobBlock... blockId:{$blockId}");
+            $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
+            $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
 
             $isCreated = true;
         }
@@ -327,10 +315,9 @@ class MediaController extends BaseController
         $asset = new Asset(Asset::OPTIONS_NONE);
         $asset->setName($filename);
         $asset = $this->mediaService->createAsset($asset);
-        $assetId = $asset->getId();
         $this->logger->addInfo("asset has been created. asset:" . var_export($asset, true));
 
-        return $assetId;
+        return $asset->getId();
     }
 
     /**

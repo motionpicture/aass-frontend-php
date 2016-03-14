@@ -5,10 +5,9 @@ var MediaEdit = {
     size: null,
     assetId: null,
     filename: null,
-    chunkSize: 1024 * 1024, // byte
+    chunkSize: 2048 * 2048, // byte
     division: null,
     createBlobBlockSuccessCount: 0,
-    createBlobBlockAjaxes: [],
     createBlobBlockTimer: null,
 
     initialize: function()
@@ -80,7 +79,7 @@ var MediaEdit = {
         formData.append('filename', self.filename);
         formData.append('index', blockIndex);
 
-        var ajax = $.ajax({
+        $.ajax({
             url: '/media/appendFile',
             method: 'post',
             dataType: 'json',
@@ -109,17 +108,11 @@ var MediaEdit = {
         .fail(function() {
             // タイマークリア
             clearInterval(self.createBlobBlockTimer);
-            // ブロック作成リクエストをキャンセル
-            $.each(self.createBlobBlockAjaxes, function(key, value) {
-                value.abort();
-            });
 
             alert('fail');
         })
         .always(function() {
         });
-
-        self.createBlobBlockAjaxes.push(ajax);
     },
 
     commitFile: function()
