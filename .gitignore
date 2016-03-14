@@ -1,9 +1,7 @@
 /logs/*
-/uploads/*
 .project
 .settings
 Web.config
-.htaccess
 composer.phar
 composer.lock
 vendor/*

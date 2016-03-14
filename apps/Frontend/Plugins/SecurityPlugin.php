@@ -36,7 +36,7 @@ class SecurityPlugin extends Plugin
 
     public function logout()
     {
-        $this->session->destroy();
+        $this->session->set(self::AUTH_SESSION_NAME, null);
     }
 
     public function getId()
