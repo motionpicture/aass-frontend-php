@@ -5,10 +5,12 @@ var MediaEdit = {
     size: null,
     assetId: null,
     filename: null,
-    chunkSize: 2048 * 2048, // byte
+    chunkSize: 1024 * 1024, // byte
     division: null,
-    createBlobBlockSuccessCount: 0,
     createBlobBlockTimer: null,
+    blobBlockUncreatedIndexes: [], // 未作成ブロックインデックス
+    blobBlockCreatedIndexes: [], // 作成済みブロックインデックス
+    blobBlockCreatingIndexes: [], // 作成中ブロックインデックス
 
     initialize: function()
     {
@@ -22,6 +24,9 @@ var MediaEdit = {
             this.size = this.file.size;
             this.division = Math.ceil(this.size / this.chunkSize);
             console.log(this.file, this.extension, this.size);
+            for (var i=0; i<this.division; i++) {
+                this.blobBlockUncreatedIndexes.push(i);
+            }
         }
     },
 
@@ -30,11 +35,11 @@ var MediaEdit = {
         $('#progressText').html(text);
     },
 
-    loadFile: function(context, index)
+    loadFile: function(context, blockIndex)
     {
         var self = context;
 
-        var readPos = self.chunkSize * index;
+        var readPos = self.chunkSize * blockIndex;
         var endPos = readPos + self.chunkSize;
         if (endPos > self.size) {
             endPos = self.size;
@@ -61,7 +66,7 @@ var MediaEdit = {
         {
             // ステータスチェック
             if (e.target.readyState == FileReader.DONE) { // DONE == 2
-                self.createBlobBlock(e.target.result, index);
+                self.createBlobBlock(e.target.result, blockIndex);
             }
         }
 
@@ -93,23 +98,36 @@ var MediaEdit = {
                 $('p.error').append(data.messages.join('<br>'));
             } else {
                 // 結果保存
-                self.createBlobBlockSuccessCount++;
-                console.log('createBlobBlockSuccessCount:' + self.createBlobBlockSuccessCount);
-                var rate = Math.floor(self.createBlobBlockSuccessCount * 100 / self.division);
-                self.showProgress(rate + '% (' + self.createBlobBlockSuccessCount + '/' + self.division + ') をアップロードしました...');
+                console.log('created. index:' + blockIndex);
+                self.blobBlockCreatedIndexes.push(blockIndex);
+                self.blobBlockCreatingIndexes.splice(self.blobBlockCreatingIndexes.indexOf(blockIndex), 1);
+
+                var blobBlockCreatedCount = self.blobBlockCreatedIndexes.length;
+                console.log('blobBlockCreatedCount:' + blobBlockCreatedCount);
+
+                var rate = Math.floor(blobBlockCreatedCount * 100 / self.division);
+                self.showProgress(rate + '% (' + blobBlockCreatedCount + '/' + self.division + ') をアップロードしました...');
 
                 // ブロブブロックを全て作成したらコミット
-                if (self.createBlobBlockSuccessCount == self.division) {
+                if (blobBlockCreatedCount == self.division) {
                     // コミット
                     self.commitFile();
                 }
             }
         })
         .fail(function() {
-            // タイマークリア
-            clearInterval(self.createBlobBlockTimer);
+            self.blobBlockUncreatedIndexes.push(blockIndex);
+            self.blobBlockCreatingIndexes.splice(self.blobBlockCreatingIndexes.indexOf(blockIndex), 1);
 
-            alert('fail');
+            // 3度までリトライ?
+//            if (tryCount < 3) {
+//                self.loadFile(self, blockIndex, tryCount + 1);
+//            } else {
+//                // タイマークリア
+//                clearInterval(self.createBlobBlockTimer);
+//                self.createBlobBlockTimer = null;
+//                alert('ブロブブロックを作成できませんでした blockIndex:' + blockIndex);
+//            }
         })
         .always(function() {
         });
@@ -176,17 +194,18 @@ var MediaEdit = {
                 self.filename = data.params.filename;
 
                 // 定期的にブロブブロック作成
-                var index = 0;
                 self.createBlobBlockTimer = setInterval(function()
                 {
                     // 回線が遅い場合、アクセスがたまりすぎないように調整
-                    if (index - self.createBlobBlockSuccessCount > 10) {
+                    if (self.blobBlockCreatingIndexes.length > 5) {
                         return;
                     }
 
-                    if (index < self.division) {
-                        self.loadFile(self, index);
-                        index++;
+                    if (self.blobBlockUncreatedIndexes.length > 0) {
+                        var nextIndex = self.blobBlockUncreatedIndexes[0];
+                        self.blobBlockCreatingIndexes.push(nextIndex);
+                        self.blobBlockUncreatedIndexes.shift();
+                        self.loadFile(self, nextIndex);
                     } else {
                         clearInterval(self.createBlobBlockTimer);
                     }
