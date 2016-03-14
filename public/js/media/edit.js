@@ -80,7 +80,7 @@ var MediaEdit = {
         formData.append('filename', self.filename);
         formData.append('index', blockIndex);
 
-        self.createBlobBlockAjaxes[] = $.ajax({
+        var ajax = $.ajax({
             url: '/media/appendFile',
             method: 'post',
             dataType: 'json',
@@ -118,6 +118,8 @@ var MediaEdit = {
         })
         .always(function() {
         });
+
+        self.createBlobBlockAjaxes.push(ajax);
     },
 
     commitFile: function()
