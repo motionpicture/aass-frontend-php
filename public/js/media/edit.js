@@ -97,7 +97,7 @@ var MediaEdit = {
                 self.createBlobBlockSuccessCount++;
                 console.log('createBlobBlockSuccessCount:' + self.createBlobBlockSuccessCount);
                 var rate = Math.floor(self.createBlobBlockSuccessCount * 100 / self.division);
-                self.showProgress(rate + '%をアップロードしました...');
+                self.showProgress(rate + '% (' + self.createBlobBlockSuccessCount + '/' + self.division + ') をアップロードしました...');
 
                 // ブロブブロックを全て作成したらコミット
                 if (self.createBlobBlockSuccessCount == self.division) {
