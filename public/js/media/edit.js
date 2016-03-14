@@ -30,9 +30,9 @@ var MediaEdit = {
         $('#progressText').html(text);
     },
 
-    loadFile: function()
+    loadFile: function(context)
     {
-        var self = this;
+        var self = context;
 
         var readPos = self.chunkSize * self.index;
         var endPos = readPos + self.chunkSize;
@@ -65,8 +65,11 @@ var MediaEdit = {
 
                 if (self.index < self.division - 1) {
                     // 次のブロック
-                    self.index++;
-                    self.loadFile();
+                    setTimeout(function()
+                    {
+                        self.index++;
+                        self.loadFile(self);
+                    }, 1000);
                 }
             }
         }
@@ -101,7 +104,7 @@ var MediaEdit = {
                 // 結果保存
                 self.createBlobBlockSuccessCount++;
                 console.log('createBlobBlockSuccessCount:' + self.createBlobBlockSuccessCount);
-                self.showProgress(createBlobBlockSuccessCount + '/' + self.division + 'をアップロードしました...');
+                self.showProgress(self.createBlobBlockSuccessCount + '/' + self.division + 'をアップロードしました...');
 
                 // ブロブブロックを全て作成したらコミット
                 if (self.createBlobBlockSuccessCount == self.division) {
@@ -178,7 +181,7 @@ var MediaEdit = {
                 self.filename = data.params.filename;
 
                 // 定期的にブロブブロック作成
-                self.loadFile();
+                self.loadFile(self);
             }
         })
         .fail(function() {
