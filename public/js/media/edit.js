@@ -95,7 +95,10 @@ var MediaEdit = {
         .done(function(data) {
             // エラーメッセー時表示
             if (!data.isSuccess) {
-                $('p.error').append(data.messages.join('<br>'));
+//                $('p.error').append(data.messages.join('<br>'));
+                // リトライ
+                self.blobBlockUncreatedIndexes.push(blockIndex);
+                self.blobBlockCreatingIndexes.splice(self.blobBlockCreatingIndexes.indexOf(blockIndex), 1);
             } else {
                 // 結果保存
                 console.log('created. index:' + blockIndex);
@@ -116,6 +119,7 @@ var MediaEdit = {
             }
         })
         .fail(function() {
+            // リトライ
             self.blobBlockUncreatedIndexes.push(blockIndex);
             self.blobBlockCreatingIndexes.splice(self.blobBlockCreatingIndexes.indexOf(blockIndex), 1);
 

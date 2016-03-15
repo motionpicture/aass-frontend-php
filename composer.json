@@ -21,7 +21,8 @@
         "swiftmailer/swiftmailer": "@stable",
         "monolog/monolog": "@stable",
         "microsoft/windowsazure": "*",
-        "jamesheinrich/getid3" : "dev-master"
+        "pear/mail_mime-decode": "1.5.5",
+        "jamesheinrich/getid3": "dev-master"
     },
     "minimum-stability": "dev",
     "autoload": {

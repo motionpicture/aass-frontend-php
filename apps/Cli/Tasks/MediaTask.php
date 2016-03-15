@@ -55,11 +55,8 @@ class MediaTask extends BaseTask
      */
     private function createJob($media)
     {
-        $job = null;
-
         $tasks = [];
         // adaptive bitrate mp4 task
-//         $mediaProcessor = $this->mediaService->getLatestMediaProcessor('Azure Media Encoder');
         $mediaProcessor = $this->mediaService->getLatestMediaProcessor('Media Encoder Standard');
         $taskBody = $this->getMediaServicesTaskBody(
             'JobInputAsset(0)',
@@ -68,8 +65,8 @@ class MediaTask extends BaseTask
             "{$media['id']}[adaptive_bitrate_mp4]"
         );
         $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
-//         $task->setConfiguration('H264 Adaptive Bitrate MP4 Set 1080p');
         $task->setConfiguration('H264 Multiple Bitrate 1080p');
+//         $task->setConfiguration('H264 Single Bitrate 1080p');
 //         $configurationFile  = __DIR__ . '/../../../config/taskConfig.xml';
 //         $task->setConfiguration(file_get_contents($configurationFile));
 

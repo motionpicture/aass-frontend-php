@@ -11,6 +11,7 @@
     <td><?= $media['uploaded_by'] ?></td>
     <td><?= $media['size'] ?></td>
     <td><?= \Aass\Frontend\Models\Media::status2string($media['status']) ?></td>
+    <td><? if ($media['url']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url']) ?>">ストリーミング</a><? } ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
         <a href="<?= $this->url->get(['for' => 'mediaEdit', 'id' => $media['id']]) ?>" class="">編集</a>
