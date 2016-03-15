@@ -213,7 +213,7 @@ var MediaEdit = {
                     } else {
                         clearInterval(self.createBlobBlockTimer);
                     }
-                }, 500);
+                }, 250);
             }
         })
         .fail(function() {
