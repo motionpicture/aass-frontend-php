@@ -1,14 +1,9 @@
 <?php
 namespace Aass\Frontend\Controllers;
 
-use \Aass\Frontend\Models\Media as MediaModel;
 use \Aass\Frontend\Models\Application as ApplicationModel;
-use \WindowsAzure\MediaServices\Models\Asset;
-use \WindowsAzure\MediaServices\Models\AccessPolicy;
-use \WindowsAzure\MediaServices\Models\Locator;
-use \WindowsAzure\Blob\Models\Block;
 
-class MediaController extends BaseController
+class ApplicationController extends BaseController
 {
     const BLOCK_ID_PREFIX = 'block-';
     const MAX_BLOCK_SIZE = 4194304; // 最大で4MB
@@ -16,11 +11,14 @@ class MediaController extends BaseController
 
     public function indexAction()
     {
-        $mediaModel = new MediaModel;
-        $this->view->medias = $mediaModel->getListByEventId($this->auth->getId());
-
-        $applicationModel = new ApplicationModel;
-        $this->view->application = $applicationModel->getByEventId($this->auth->getId());
+        try {
+            $mediaModel = new MediaModel;
+            $medias = $mediaModel->getListByEventId($this->auth->getId());
+            $this->view->medias = $medias;
+        } catch (\Exception $e) {
+            $this->logger->addError("fail in getListByUserId. message:{$e}");
+            throw $e;
+        }
     }
 
     /**
@@ -409,31 +407,5 @@ class MediaController extends BaseController
         }
 
         throw new \Exception('予期せぬエラー');
-    }
-
-    /**
-     * 申請する
-     */
-    public function applyAction()
-    {
-        $this->response->setHeader('Content-type', 'application/json');
-
-        $isSuccess = false;
-        $message = '';
-
-        try {
-            $applicationModel = new ApplicationModel;
-            $isSuccess = $applicationModel->create($this->dispatcher->getParam('id'));
-        } catch (\Exception $e) {
-            $this->logger->addError("applicationModel->create throw exception. message:{$e}");
-            $message = '申請に失敗しました';
-        }
-
-        echo json_encode([
-            'isSuccess' => $isSuccess,
-            'message' => $message
-        ]);
-
-        return false;
     }
 }

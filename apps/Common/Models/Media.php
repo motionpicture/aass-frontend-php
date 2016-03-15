@@ -36,7 +36,7 @@ class Media extends Base
             self::STATUS_DELETED => '削除済み',
             self::STATUS_ERROR => 'エンコード失敗',
         ];
- 
+
         return (isset($strings[$status])) ? $strings[$status] : null;
     }
 }

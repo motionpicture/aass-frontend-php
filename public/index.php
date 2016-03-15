@@ -141,6 +141,11 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'delete'
         ])->setName('mediaDelete');
 
+        $router->add('/media/{id}/apply', [
+            'controller' => 'media',
+            'action' => 'apply'
+        ])->setName('mediaApply');
+
         return $router;
     });
 

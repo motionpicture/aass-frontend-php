@@ -62,7 +62,7 @@ CREATE TABLE `media` (
   `status` tinyint(1) NOT NULL,
   `filename` varchar(255) DEFAULT NULL,
   `extension` varchar(255) DEFAULT NULL,
-  `size` int(10) UNSIGNED DEFAULT NULL,
+  `size` bigint UNSIGNED DEFAULT NULL,
   `playtime_string` varchar(255) DEFAULT NULL,
   `playtime_seconds` varchar(255) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,

@@ -3,8 +3,35 @@
 <script src="/js/media/index.js"></script>
 
 動画一覧
+<style>
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table th{
+    padding: 6px;
+    text-align: left;
+    vertical-align: top;
+    color: #333;
+    background-color: #eee;
+    border: 1px solid #b9b9b9;
+}
+table td{
+    padding: 6px;
+    background-color: #fff;
+    border: 1px solid #b9b9b9;
+}
+</style>
 <table>
 <tbody>
+<tr>
+    <th>タイトル</th>
+    <th>登録者名</th>
+    <th>サイズ(byte)</th>
+    <th>ステータス</th>
+    <th>URL</th>
+    <th>各種機能</th>
+</tr>
 <?php foreach ($medias as $media) { ?>
 <tr>
     <td><?= $media['title'] ?></td>
@@ -14,10 +41,24 @@
     <td><?php if ($media['url']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url']) ?>">ストリーミング</a><?php } ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
+        <input type="hidden" name="application_id" value="<?= ($application && $application['media_id'] == $media['id']) ? $application['id'] : '' ?>">
         <a href="<?= $this->url->get(['for' => 'mediaEdit', 'id' => $media['id']]) ?>" class="">編集</a>
         <a href="<?= $this->url->get(['for' => 'mediaDownload', 'id' => $media['id']]) ?>" target="_blank" class="">ダウンロード</a>
         <a href="javascript:void(0)" class="delete_media">削除</a>
-        <a href="javascript:void(0)" class="">動画申請</a>
+
+        <span class="no_apply_media"<?php if (!$application) { ?> style="display:none;"<?php } ?>>
+        <?php if ($application && $application['media_id'] == $media['id']) { ?>
+        <?= \Aass\Frontend\Models\Application::status2string($application['status']) ?>
+        <?php } else { ?>申請不可
+        <?php } ?>
+        </span>
+
+        <span class="apply_media"<?php if ($application) { ?> style="display:none;"<?php } ?>>
+        <?php if ($media['status'] == \Aass\Backend\Models\Media::STATUS_ENCODED) { ?>
+        <a href="javascript:void(0)">動画申請</a>
+        <?php } else { ?>申請不可
+        <?php } ?>
+        </span>
     </td>
 </tr>
 

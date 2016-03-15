@@ -100,6 +100,21 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'index'
         ])->setName('events');
 
+        $router->add('/application/{id}/accept', [
+            'controller' => 'application',
+            'action' => 'accept'
+        ])->setName('applicationAccept');
+
+        $router->add('/application/{id}/reject', [
+            'controller' => 'application',
+            'action' => 'reject'
+        ])->setName('applicationReject');
+
+        $router->add('/application/{id}/delete', [
+            'controller' => 'application',
+            'action' => 'delete'
+        ])->setName('applicationDelete');
+
         return $router;
     });
 
