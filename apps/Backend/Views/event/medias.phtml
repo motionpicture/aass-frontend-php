@@ -1,8 +1,6 @@
 <?php require __DIR__ . '/../header.phtml' ?>
 
-<script src="/js/media/index.js"></script>
-
-<h1>動画一覧</h1>
+<h1><?= $event['user_id'] ?>さんの動画一覧</h1>
 
 <table class="table table-striped">
 <tbody>
@@ -19,25 +17,16 @@
     <td><?= $media['title'] ?></td>
     <td><?= $media['uploaded_by'] ?></td>
     <td><?= $media['size'] ?></td>
-    <td><?= \Aass\Frontend\Models\Media::status2string($media['status']) ?></td>
+    <td><?= \Aass\Backend\Models\Media::status2string($media['status']) ?></td>
     <td><?php if ($media['url']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url']) ?>">ストリーミング</a><?php } ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
         <input type="hidden" name="application_id" value="<?= ($application && $application['media_id'] == $media['id']) ? $application['id'] : '' ?>">
-        <a href="<?= $this->url->get(['for' => 'mediaEdit', 'id' => $media['id']]) ?>" class="">編集</a>
         <a href="<?= $this->url->get(['for' => 'mediaDownload', 'id' => $media['id']]) ?>" target="_blank" class="">ダウンロード</a>
-        <a href="javascript:void(0)" class="delete_media">削除</a>
 
         <span class="no_apply_media"<?php if (!$application) { ?> style="display:none;"<?php } ?>>
         <?php if ($application && $application['media_id'] == $media['id']) { ?>
-        <?= \Aass\Frontend\Models\Application::status2string($application['status']) ?>
-        <?php } else { ?>申請不可
-        <?php } ?>
-        </span>
-
-        <span class="apply_media"<?php if ($application) { ?> style="display:none;"<?php } ?>>
-        <?php if ($media['status'] == \Aass\Frontend\Models\Media::STATUS_ENCODED) { ?>
-        <a href="javascript:void(0)">動画申請</a>
+        <?= \Aass\Backend\Models\Application::status2string($application['status']) ?>
         <?php } else { ?>申請不可
         <?php } ?>
         </span>

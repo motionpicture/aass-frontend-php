@@ -39,4 +39,15 @@ class Media extends Base
 
         return (isset($strings[$status])) ? $strings[$status] : null;
     }
+
+    public function getListByEventId($eventId)
+    {
+        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId AND status <> :status');
+        $statement->execute([
+            'eventId' => $eventId,
+            'status' => self::STATUS_DELETED
+        ]);
+
+        return $statement->fetchAll();
+    }
 }

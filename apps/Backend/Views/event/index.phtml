@@ -2,27 +2,9 @@
 
 <script src="/admin/js/event/index.js"></script>
 
-上映会一覧
-<style>
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-table th{
-    padding: 6px;
-    text-align: left;
-    vertical-align: top;
-    color: #333;
-    background-color: #eee;
-    border: 1px solid #b9b9b9;
-}
-table td{
-    padding: 6px;
-    background-color: #fff;
-    border: 1px solid #b9b9b9;
-}
-</style>
-<table>
+<h1>上映会一覧</h1>
+
+<table class="table table-striped">
 <tbody>
 <tr>
     <th>ユーザID</th>
@@ -46,6 +28,7 @@ table td{
         <input type="hidden" name="application_id" value="<?= $event['application_id'] ?>">
         <input type="hidden" name="media_id" value="<?= $event['media_id'] ?>">
 
+        <a href="<?= $this->url->get(['for' => 'eventMedias', 'id' => $event['id']]) ?>">動画一覧</a>
         <span class="application_status">
         <?php if ($event['application_id']) { ?>
         <?php if ($event['application_status'] == \Aass\Backend\Models\Application::STATUS_CREATED) { ?>

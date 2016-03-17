@@ -2,33 +2,35 @@
 
 <script src="/admin/js/event/edit.js"></script>
 
-<h1>アカウント編集</h1>
+<h1><?= ($defaults['id']) ? "{$defaults['user_id']}のアカウント編集" : 'アカウント追加' ?></h1>
 
 <p class="error" style="color: #FF0000;"></p>
 
 <form method="POST">
     <input type="hidden" name="id" class="" value="<?= $defaults['id'] ?>">
+    <input type="hidden" name="held_from" class="" value="<?= $defaults['held_from'] ?>:00">
+    <input type="hidden" name="held_to" class="" value="<?= $defaults['held_to'] ?>:00">
     <div class="form-group">
         <p>
-            <input type="text" name="email" class="" value="<?= $defaults['email'] ?>" placeholder="申請者メールアドレス">
+            <input type="text" name="email" class="form-control" value="<?= $defaults['email'] ?>" placeholder="申請者メールアドレス">
         </p>
         <p>
-            <input type="text" name="user_id" class="" value="<?= $defaults['user_id'] ?>" placeholder="ユーザID">
+            <input type="text" name="user_id" class="form-control" value="<?= $defaults['user_id'] ?>" placeholder="ユーザID">
         </p>
         <p>
-            <input type="text" name="password" class="" value="<?= $defaults['password'] ?>" placeholder="パスワード">
+            <input type="text" name="password" class="form-control" value="<?= $defaults['password'] ?>" placeholder="パスワード">
         </p>
         <p>
-            <input type="text" name="held_at" class="" value="<?= $defaults['held_at'] ?>" placeholder="上映日時">
+            <input type="text" name="held" class="form-control" value="" placeholder="上映日時">
         </p>
         <p>
-            <input type="text" name="place" class="" value="<?= $defaults['place'] ?>" placeholder="上映場所">
+            <input type="text" name="place" class="form-control" value="<?= $defaults['place'] ?>" placeholder="上映場所">
         </p>
         <p>
-            <textarea type="text" name="remarks" class="" placeholder="備考"><?= $defaults['remarks'] ?></textarea>
+            <textarea type="text" name="remarks" class="form-control" placeholder="備考"><?= $defaults['remarks'] ?></textarea>
         </p>
         <p>
-            <button type="submit" class="">登録</button>
+            <button type="submit" class="btn btn-primary">登録</button>
         <p>
     </div>
 </form>

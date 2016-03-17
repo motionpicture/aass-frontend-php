@@ -1,20 +1,18 @@
+<?php require __DIR__ . '/../header.phtml' ?>
+
 <h1>バックエンドログイン</h1>
 <form action="<?= $this->url->get(['for' => 'login']) ?>" method="post">
-    <fieldset>
-        <div>
-            <label for="user_id">UserId</label>
-            <div>
-                <input type="text" name="user_id">
-            </div>
-        </div>
-        <div>
-            <label for="password">Password</label>
-            <div>
-                <input type="password" name="password">
-            </div>
-        </div>
-        <div>
-            <input type="submit" value="Login">
-        </div>
-    </fieldset>
+<div class="form-group">
+        <p>
+            <input type="text" name="user_id" class="form-control" placeholder="UserId">
+        </p>
+        <p>
+            <input type="password" name="password" class="form-control" placeholder="Password">
+        </p>
+        <p>
+            <input type="submit" value="Login" class="btn btn-primary">
+        </p>
+</div>
 </form>
+
+<?php require __DIR__ . '/../footer.phtml' ?>

@@ -2,7 +2,7 @@
 
 <script src="/js/media/edit.js"></script>
 
-<h1>動画編集</h1>
+<h1><?= ($defaults['id']) ? "{$defaults['title']}の動画編集" : '動画追加' ?></h1>
 
 <div class="progress" style="display:none;">
     <p id="progressText"></p>
@@ -25,11 +25,11 @@
         </p>
         <?php if (!$defaults['id']) { ?>
         <p>
-            <input type="file" name="file" value="">
+            <input type="file" name="file" class="form-control" value="">
         </p>
         <?php } ?>
         <p>
-            <button type="button" class="">登録</button>
+            <button type="button" class="btn btn-primary">登録</button>
         <p>
     </div>
 </form>

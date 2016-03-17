@@ -19,7 +19,7 @@ SELECT
      WHERE m.status <> :mediaStatus AND a2.status <> :applicationStatus
  ) a ON a.event_id = e.id
  GROUP BY e.id
- ORDER BY held_at DESC
+ ORDER BY held_from DESC
 EOF;
         $statement = $this->db->prepare($query);
         $statement->execute([
@@ -75,23 +75,25 @@ EOF;
     public function updateFromArray(array $params)
     {
         if (isset($params['id']) && $params['id']) {
-            $statement = $this->db->prepare('UPDATE `event` SET `user_id` = :userId, `email` = :email, `password` = :password, `held_at` = :heldAt, `place` = :place, `remarks` = :remarks, updated_at = NOW() WHERE id = :id');
+            $statement = $this->db->prepare('UPDATE `event` SET `user_id` = :userId, `email` = :email, `password` = :password, `held_from` = :heldFrom, `held_to` = :heldTo, `place` = :place, `remarks` = :remarks, updated_at = NOW() WHERE id = :id');
             $result = $statement->execute([
                 ':id' => $params['id'],
                 ':userId' => $params['user_id'],
                 ':email' => $params['email'],
                 ':password' => $params['password'],
-                ':heldAt' => $params['held_at'],
+                ':heldFrom' => $params['held_from'],
+                ':heldTo' => $params['held_to'],
                 ':place' => $params['place'],
                 ':remarks' => $params['remarks']
             ]);
         } else {
-            $statement = $this->db->prepare('INSERT INTO event (user_id, email, password, held_at, place, remarks, created_at, updated_at) VALUES (:userId, :email, :password, :heldAt, :place, :remarks, NOW(), NOW())');
+            $statement = $this->db->prepare('INSERT INTO event (user_id, email, password, held_from, held_to, place, remarks, created_at, updated_at) VALUES (:userId, :email, :password, :heldAt, :place, :remarks, NOW(), NOW())');
             $result = $statement->execute([
                 ':userId' => $params['user_id'],
                 ':email' => $params['email'],
                 ':password' => $params['password'],
-                ':heldAt' => $params['held_at'],
+                ':heldFrom' => $params['held_from'],
+                ':heldTo' => $params['held_to'],
                 ':place' => $params['place'],
                 ':remarks' => $params['remarks']
             ]);

@@ -25,4 +25,16 @@ class Application extends Base
 
         return (isset($strings[$status])) ? $strings[$status] : null;
     }
+
+    public function getByEventId($eventId)
+    {
+        $statement = $this->db->prepare('SELECT a.id, a.media_id, a.status FROM application AS a LEFT JOIN media AS m ON m.id = a.media_id WHERE m.event_id = :eventId AND m.status <> :mediaStatus AND a.status <> :applicationStatus');
+        $statement->execute([
+            'eventId' => $eventId,
+            'mediaStatus' => Media::STATUS_DELETED,
+            'applicationStatus' => self::STATUS_DELETED
+        ]);
+
+        return $statement->fetch();
+    }
 }

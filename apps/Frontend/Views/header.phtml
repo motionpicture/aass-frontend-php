@@ -6,7 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>映画.comシネマ 上映システム</title>
 
-<script src="/js/jquery.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/jquery/3.0.0-beta1/jquery.min.js"></script>
+<script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/2.12.0/moment.min.js"></script>
+<link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/3.3.6/css/bootstrap.min.css" />
 
 <?php //if ($flash['info']) { ?>
 <script>
@@ -19,11 +21,15 @@
 </head>
 
 <body>
-    <ul class="nav navbar-nav navbar-right">
-        <li><a href="<?= $this->url->get(['for' => 'mediaNew']) ?>">メディア登録</a></li>
-        <li><a href="<?= $this->url->get(['for' => 'medias']) ?>">メディア一覧</a></li>
-        <li><a href="<?= $this->url->get(['for' => 'logout']) ?>">ログアウト</a></li>
-    </ul>
-    こんにちは <?= $this->auth->getUserId() ?>さん
-
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <?php if ($this->auth->getUserId()) { ?>
+        <ul class="nav navbar-nav navbar-right">
+            <li><a href="<?= $this->url->get(['for' => 'mediaNew']) ?>">動画追加</a></li>
+            <li><a href="<?= $this->url->get(['for' => 'medias']) ?>">動画一覧</a></li>
+            <li><a href="<?= $this->url->get(['for' => 'logout']) ?>">ログアウト</a></li>
+        </ul>
+        こんにちは <?= $this->auth->getUserId() ?>さん
+        <?php } ?>
+    </div>
+    <hr>
     <div class="container-fluid">

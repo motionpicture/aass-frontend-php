@@ -95,6 +95,11 @@ use Phalcon\Events\Manager as EventsManager;
             'action' => 'edit'
         ])->setName('eventEdit');
 
+        $router->add('/event/{id}/medias', [
+            'controller' => 'event',
+            'action' => 'medias'
+        ])->setName('eventMedias');
+
         $router->add('/events', [
             'controller' => 'event',
             'action' => 'index'
@@ -114,6 +119,11 @@ use Phalcon\Events\Manager as EventsManager;
             'controller' => 'application',
             'action' => 'delete'
         ])->setName('applicationDelete');
+
+        $router->add('/media/{id}/download', [
+            'controller' => 'media',
+            'action' => 'download'
+        ])->setName('mediaDownload');
 
         return $router;
     });

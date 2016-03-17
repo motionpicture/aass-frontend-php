@@ -1,7 +1,9 @@
 <?php
 namespace Aass\Backend\Controllers;
 
+use \Aass\Backend\Models\Application as ApplicationModel;
 use \Aass\Backend\Models\Event as EventModel;
+use \Aass\Backend\Models\Media as MediaModel;
 
 class EventController extends BaseController
 {
@@ -42,7 +44,8 @@ class EventController extends BaseController
             'email' => '',
             'user_id' => '',
             'password' => '',
-            'held_at' => '',
+            'held_from' => date('Y-m-d H:00', strtotime('+24 hours')),
+            'held_to' => date('Y-m-d H:00', strtotime('+26 hours')),
             'place' => '',
             'remarks' => '',
         ];
@@ -51,6 +54,8 @@ class EventController extends BaseController
             try {
                 $eventModel = new EventModel;
                 $defaults = array_merge($defaults, $eventModel->getById($this->dispatcher->getParam('id')));
+                $defaults['held_from'] = date('Y-m-d H:00', strtotime($defaults['held_from']));
+                $defaults['held_to'] = date('Y-m-d H:00', strtotime($defaults['held_to']));
             } catch (\Exception $e) {
                 $this->logger->addError("getById throw exception. message:{$e}");
                 throw $e;
@@ -72,7 +77,8 @@ class EventController extends BaseController
             'email' => '',
             'user_id' => '',
             'password' => '',
-            'held_at' => '',
+            'held_from' => '',
+            'held_to' => '',
             'place' => '',
             'remarks' => '',
         ];
@@ -99,8 +105,8 @@ class EventController extends BaseController
         if (!$defaults['password']) {
             $messages[] = 'パスワードを入力してください';
         }
-        if (!$defaults['held_at']) {
-            $messages[] = '上映日時を入力してください';
+        if (!$defaults['held_from'] || !$defaults['held_to']) {
+            $messages[] = '上映日時を正しく入力してください';
         }
         if (!$defaults['place']) {
             $messages[] = '上映場所を入力してください';
@@ -124,5 +130,17 @@ class EventController extends BaseController
         ]);
 
         return false;
+    }
+
+    public function mediasAction()
+    {
+        $eventModel = new EventModel;
+        $this->view->event = $eventModel->getById($this->dispatcher->getParam('id'));
+
+        $mediaModel = new MediaModel;
+        $this->view->medias = $mediaModel->getListByEventId($this->dispatcher->getParam('id'));
+
+        $applicationModel = new ApplicationModel;
+        $this->view->application = $applicationModel->getByEventId($this->dispatcher->getParam('id'));
     }
 }

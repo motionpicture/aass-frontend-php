@@ -3,17 +3,6 @@ namespace Aass\Frontend\Models;
 
 class Media extends \Aass\Common\Models\Media
 {
-    public function getListByEventId($eventId)
-    {
-        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId AND status <> :status');
-        $statement->execute([
-            'eventId' => $eventId,
-            'status' => self::STATUS_DELETED
-        ]);
-
-        return $statement->fetchAll();
-    }
-
     public function getById($id)
     {
         $statement = $this->db->prepare('SELECT * FROM media WHERE id = :id');
