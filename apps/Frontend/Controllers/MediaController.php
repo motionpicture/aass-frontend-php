@@ -100,12 +100,37 @@ class MediaController extends BaseController
 
         try {
             $params = $this->request->getPost();
+
+            // This is for large or failsafe upload
+            $end       = 0;
+            $counter   = 0;
+            $body      = '';
+            // if threshold is lower than 4mb, honor threshold, else use 4mb
+            $blockSize = self::MAX_BLOCK_SIZE;
             $blob = "{$params['filename']}.{$params['extension']}";
-            $blockId = $this->generateBlockId($params['index']);
-            $body = file_get_contents($_FILES['file']['tmp_name']);
-            $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
-            $this->blobService->createBlobBlock($params['container'], $blob, $blockId, $body);
-            $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
+            $container = $params['container'];
+            $content = file_get_contents($_FILES['file']['tmp_name']);
+            while(!$end) {
+                if (is_resource($content)) {
+                    $body = fread($content, $blockSize);
+                    if (feof($content)) {
+                        $end = 1;
+                    }
+                } else {
+                    if (strlen($content) <= $blockSize) {
+                        $body = $content;
+                        $end = 1;
+                    } else {
+                        $body = substr($content, 0, $blockSize);
+                        $content = substr_replace($content, '', 0, $blockSize);
+                    }
+                }
+                $blockId = $this->generateBlockId($params['index'] + $counter);
+                $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
+                $this->blobService->createBlobBlock($container, $blob, $blockId, $body);
+                $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
+                $counter++;
+            }
 
             $isSuccess = true;
         } catch (\Exception $e) {

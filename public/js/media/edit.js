@@ -6,9 +6,10 @@ var MediaEdit = {
     assetId: null,
     container: null,
     filename: null,
-    chunkSize: 2048 * 2048, // byte
+    chunkSize: 2 * 2048 * 2048, // byte
     division: null,
     createBlobBlockTimer: null,
+    blobBlockMaxSize: 4194304, // byte
     blobBlockUncreatedIndexes: [], // 未作成ブロックインデックス
     blobBlockCreatedIndexes: [], // 作成済みブロックインデックス
     blobBlockCreatingIndexes: [], // 作成中ブロックインデックス
@@ -80,12 +81,14 @@ var MediaEdit = {
         formData.append('extension', self.extension);
         formData.append('container', self.container);
         formData.append('filename', self.filename);
-        formData.append('index', blockIndex);
+
+        var startIndex = blockIndex * Math.floor(self.chunkSize / self.blobBlockMaxSize);
+        formData.append('index', startIndex);
 
         $.ajax({
             url: '/media/appendFile',
             method: 'post',
-            timeout: 25000,
+//            timeout: 25000,
             dataType: 'json',
             data: formData,
             processData: false, // Ajaxがdataを整形しない指定
@@ -148,7 +151,8 @@ var MediaEdit = {
         formData.append('asset_id', self.assetId);
         formData.append('container', self.container);
         formData.append('filename', self.filename);
-        formData.append('blockCount', self.division);
+        var blockCount = Math.ceil(self.size / self.blobBlockMaxSize);
+        formData.append('blockCount', blockCount);
 
         $.ajax({
             url: '/media/commitFile',
