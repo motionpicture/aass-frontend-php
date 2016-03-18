@@ -214,7 +214,7 @@ var MediaEdit = {
                         self.blobBlockUncreatedIndexes.shift();
                         self.loadFile(self, nextIndex);
                     }
-                }, 500);
+                }, 100);
             }
         })
         .fail(function() {
