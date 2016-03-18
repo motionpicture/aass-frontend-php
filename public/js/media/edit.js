@@ -204,7 +204,7 @@ var MediaEdit = {
                 self.createBlobBlockTimer = setInterval(function()
                 {
                     // 回線が遅い場合、アクセスがたまりすぎないように調整
-                    if (self.blobBlockCreatingIndexes.length > 20) {
+                    if (self.blobBlockCreatingIndexes.length > 1) {
                         return;
                     }
 
@@ -214,7 +214,7 @@ var MediaEdit = {
                         self.blobBlockUncreatedIndexes.shift();
                         self.loadFile(self, nextIndex);
                     }
-                }, 100);
+                }, 200);
             }
         })
         .fail(function() {
