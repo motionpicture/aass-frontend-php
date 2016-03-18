@@ -2,7 +2,7 @@
 
 <script src="/js/media/edit.js"></script>
 
-<h1><?= ($defaults['id']) ? "{$defaults['title']}の動画編集" : '動画追加' ?></h1>
+<h1 class="page-header"><?= ($form->get('id')->getValue()) ? "{$form->get('title')->getValue()}の動画編集" : '動画追加' ?></h1>
 
 <div class="progress" style="display:none;">
     <p id="progressText"></p>
@@ -11,26 +11,15 @@
 <p class="error" style="color: #FF0000;"></p>
 
 <form enctype="multipart/form-data" method="POST">
-<!--     <input type="hidden" name="MAX_FILE_SIZE" value="2000000000" /> -->
-    <input type="hidden" name="id" class="" value="<?= $defaults['id'] ?>">
+    <?= $form->render('id') ?>
     <div class="form-group">
-        <p>
-            <input type="text" name="title" class="form-control" value="<?= $defaults['title'] ?>" placeholder="動画名">
-        </p>
-        <p>
-            <textarea type="text" name="description" class="form-control" placeholder="動画概要"><?= $defaults['description'] ?></textarea>
-        </p>
-        <p>
-            <input type="text" name="uploadedBy" class="form-control" value="<?= $defaults['uploadedBy'] ?>" placeholder="動画登録者名">
-        </p>
-        <?php if (!$defaults['id']) { ?>
-        <p>
-            <input type="file" name="file" class="form-control" value="">
-        </p>
+        <?= $form->render('title', ['class' => 'form-control']) ?>
+        <?= $form->render('description', ['class' => 'form-control']) ?>
+        <?= $form->render('uploaded_by', ['class' => 'form-control']) ?>
+        <?php if (!$form->get('id')->getValue()) { ?>
+        <?= $form->render('file', ['class' => 'form-control']) ?>
         <?php } ?>
-        <p>
-            <button type="button" class="btn btn-primary">登録</button>
-        <p>
+        <button type="button" class="btn btn-primary"><?= $form->getValue('id') ?>登録</button>
     </div>
 </form>
 

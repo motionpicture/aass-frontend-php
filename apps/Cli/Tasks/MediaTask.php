@@ -56,21 +56,33 @@ class MediaTask extends BaseTask
     private function createJob($media)
     {
         $tasks = [];
-        // adaptive bitrate mp4 task
+
         $mediaProcessor = $this->mediaService->getLatestMediaProcessor('Media Encoder Standard');
+
+        // thumbnail task
         $taskBody = $this->getMediaServicesTaskBody(
             'JobInputAsset(0)',
             'JobOutputAsset(0)',
             Asset::OPTIONS_NONE,
-            "{$media['id']}[adaptive_bitrate_mp4]"
+            "{$media['id']}[thumbnails]"
+        );
+        $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
+        $configurationFile  = __DIR__ . '/../../../config/thumbnailConfig.json';
+        $task->setConfiguration(file_get_contents($configurationFile));
+        $tasks[] = $task;
+
+        // adaptive bitrate mp4 task
+        $taskBody = $this->getMediaServicesTaskBody(
+            'JobInputAsset(0)',
+            'JobOutputAsset(1)',
+            Asset::OPTIONS_NONE,
+            "{$media['id']}[MultipleBitrate1080p]"
         );
         $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
         $task->setConfiguration('H264 Multiple Bitrate 1080p');
 //         $task->setConfiguration('H264 Single Bitrate 1080p');
-//         $configurationFile  = __DIR__ . '/../../../config/taskConfig.xml';
-//         $task->setConfiguration(file_get_contents($configurationFile));
-
         $tasks[] = $task;
+
         $this->logger->addInfo('tasks has been prepared. tasks count:' . count($tasks));
 
         $inputAsset = $this->mediaService->getAsset($media['asset_id']);
@@ -94,7 +106,14 @@ class MediaTask extends BaseTask
      * @return string
      */
     private function getMediaServicesTaskBody($inputAsset, $outputAsset, $outputAssetOptions, $outputAssetName) {
-        return '<?xml version="1.0" encoding="utf-8"?><taskBody><inputAsset>' . $inputAsset . '</inputAsset><outputAsset assetCreationOptions="' . $outputAssetOptions . '" assetName="' . $outputAssetName . '">' . $outputAsset . '</outputAsset></taskBody>';
+        $xml = <<<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<taskBody>
+    <inputAsset>{$inputAsset}</inputAsset>
+    <outputAsset assetCreationOptions="{$outputAssetOptions}" assetName="{$outputAssetName}">{$outputAsset}</outputAsset>
+</taskBody>';
+EOF;
+        return $xml;
     }
 
     /**

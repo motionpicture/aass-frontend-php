@@ -1,17 +1,18 @@
 <?php require __DIR__ . '/../header.phtml' ?>
 
-<h1>フロントエンドログイン</h1>
+<h1 class="page-header">フロントエンドログイン</h1>
+
+<p class="error" style="color: #FF0000;">
+<?php foreach ($messages as $message) { ?>
+<?= $message ?><br>
+<?php } ?>
+</p>
+
 <form action="<?= $this->url->get(['for' => 'login']) ?>" method="post">
 <div class="form-group">
-        <p>
-            <input type="text" name="user_id" class="form-control" placeholder="UserId">
-        </p>
-        <p>
-            <input type="password" name="password" class="form-control" placeholder="Password">
-        </p>
-        <p>
-            <input type="submit" value="Login" class="btn btn-primary">
-        </p>
+	<?= $form->render('user_id', ['class' => 'form-control']) ?>
+	<?= $form->render('password', ['class' => 'form-control']) ?>
+    <input type="submit" value="Login" class="btn btn-primary">
 </div>
 </form>
 
