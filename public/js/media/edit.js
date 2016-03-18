@@ -17,6 +17,14 @@ var MediaEdit = {
         this.isNew = (!$('input[name="id"]', $('form')).val());
 
         if (this.isNew) {
+            this.assetId = null;
+            this.filename = null;
+            this.division = null;
+            this.createBlobBlockTimer = null;
+            this.blobBlockUncreatedIndexes = [];
+            this.blobBlockCreatedIndexes = [];
+            this.blobBlockCreatingIndexes = [];
+
             this.file = $('input[name="file"]', $('form'))[0].files[0];
             console.log(this.file);
             f = this.file.name.split('.');
@@ -27,14 +35,6 @@ var MediaEdit = {
             for (var i=0; i<this.division; i++) {
                 this.blobBlockUncreatedIndexes.push(i);
             }
-
-            this.assetId = null;
-            this.filename = null;
-            this.division = null;
-            this.createBlobBlockTimer = null;
-            this.blobBlockUncreatedIndexes = [];
-            this.blobBlockCreatedIndexes = [];
-            this.blobBlockCreatingIndexes = [];
         }
     },
 
