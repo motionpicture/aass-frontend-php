@@ -203,8 +203,8 @@ var MediaEdit = {
                 // 定期的にブロブブロック作成
                 self.createBlobBlockTimer = setInterval(function()
                 {
-                    // 回線が遅い場合、アクセスがたまりすぎないように調整
-                    if (self.blobBlockCreatingIndexes.length > 1) {
+                    // 回線が遅い場合、アクセスがたまりすぎないように調整(ブラウザ同時接続数を考慮)
+                    if (self.blobBlockCreatingIndexes.length > 5) {
                         return;
                     }
 
@@ -214,7 +214,7 @@ var MediaEdit = {
                         self.blobBlockUncreatedIndexes.shift();
                         self.loadFile(self, nextIndex);
                     }
-                }, 200);
+                }, 300);
             }
         })
         .fail(function() {
