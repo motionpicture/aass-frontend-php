@@ -4,6 +4,7 @@ var MediaEdit = {
     extension: null,
     size: null,
     assetId: null,
+    container: null,
     filename: null,
     chunkSize: 2048 * 2048, // byte
     division: null,
@@ -18,6 +19,7 @@ var MediaEdit = {
 
         if (this.isNew) {
             this.assetId = null;
+            this.container = null;
             this.filename = null;
             this.division = null;
             this.createBlobBlockTimer = null;
@@ -76,13 +78,14 @@ var MediaEdit = {
         var formData = new FormData();
         formData.append('file', fileData);
         formData.append('extension', self.extension);
-        formData.append('assetId', self.assetId);
+        formData.append('container', self.container);
         formData.append('filename', self.filename);
         formData.append('index', blockIndex);
 
         $.ajax({
             url: '/media/appendFile',
             method: 'post',
+            timeout: 25000,
             dataType: 'json',
             data: formData,
             processData: false, // Ajaxがdataを整形しない指定
@@ -109,6 +112,8 @@ var MediaEdit = {
 
                 // ブロブブロックを全て作成したらコミット
                 if (blobBlockCreatedCount == self.division) {
+                    clearInterval(self.createBlobBlockTimer);
+
                     // コミット
                     self.commitFile();
                 }
@@ -141,6 +146,7 @@ var MediaEdit = {
         var formData = new FormData();
         formData.append('extension', self.extension);
         formData.append('assetId', self.assetId);
+        formData.append('container', self.container);
         formData.append('filename', self.filename);
         formData.append('blockCount', self.division);
 
@@ -191,6 +197,7 @@ var MediaEdit = {
                 // アセットIDとファイル名を取得
                 console.log(data.params);
                 self.assetId = data.params.assetId;
+                self.container = data.params.container;
                 self.filename = data.params.filename;
 
                 // 定期的にブロブブロック作成
@@ -206,8 +213,6 @@ var MediaEdit = {
                         self.blobBlockCreatingIndexes.push(nextIndex);
                         self.blobBlockUncreatedIndexes.shift();
                         self.loadFile(self, nextIndex);
-                    } else {
-                        clearInterval(self.createBlobBlockTimer);
                     }
                 }, 500);
             }
