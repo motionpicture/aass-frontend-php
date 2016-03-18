@@ -58,6 +58,10 @@ var MediaEdit = {
             return false;
         }
 
+        self.createBlobBlock(blob, blockIndex);
+        return;
+
+        /*
         // ファイルの分割開始
         var fileReader = new FileReader();
 
@@ -71,6 +75,7 @@ var MediaEdit = {
         }
 
         fileReader.readAsDataURL(blob);
+        */
     },
 
     createBlobBlock: function(fileData, blockIndex)

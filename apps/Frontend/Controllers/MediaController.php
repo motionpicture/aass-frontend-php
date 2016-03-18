@@ -119,8 +119,11 @@ class MediaController extends BaseController
         $messages = [];
 
         try {
-            $dataparts = explode(',', $_POST['file'], 2);
-            $content = base64_decode($dataparts[1]);
+            $this->logger->addDebug(var_export($_POST, true));
+            $this->logger->addDebug(var_export($_FILES, true));
+//             $dataparts = explode(',', $_POST['file'], 2);
+//             $content = base64_decode($dataparts[1]);
+            $content = file_get_contents($_FILES['file']['tmp_name']);
             $isSuccess = $this->appendFile($_POST['assetId'], $_POST['filename'], $_POST['extension'], $content, $_POST['index']);
         } catch (\Exception $e) {
             $this->logger->addError("appendFile throw exception. message:{$e}");
