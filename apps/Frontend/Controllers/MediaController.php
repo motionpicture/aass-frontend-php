@@ -1,12 +1,13 @@
 <?php
 namespace Aass\Frontend\Controllers;
 
-use \Aass\Frontend\Models\Media as MediaModel;
-use \Aass\Frontend\Models\Application as ApplicationModel;
-use \WindowsAzure\MediaServices\Models\Asset;
-use \WindowsAzure\MediaServices\Models\AccessPolicy;
-use \WindowsAzure\MediaServices\Models\Locator;
-use \WindowsAzure\Blob\Models\Block;
+use Aass\Frontend\Models\Media as MediaModel;
+use Aass\Frontend\Forms\MediaForm as MediaForm;
+use Aass\Frontend\Models\Application as ApplicationModel;
+use WindowsAzure\MediaServices\Models\Asset;
+use WindowsAzure\MediaServices\Models\AccessPolicy;
+use WindowsAzure\MediaServices\Models\Locator;
+use WindowsAzure\Blob\Models\Block;
 
 class MediaController extends BaseController
 {
@@ -25,8 +26,6 @@ class MediaController extends BaseController
 
     /**
      * 動画登録
-     * 
-     * @throws \Exception
      */
     public function newAction()
     {
@@ -38,44 +37,22 @@ class MediaController extends BaseController
 
     /**
      * 動画編集
-     *
-     * @throws \Exception
      */
     public function editAction()
     {
-        $messages = [];
-        $defaults = [
-            'id' => '',
-            'title' => '',
-            'description' => '',
-            'uploadedBy' => '',
-        ];
+        $form = new MediaForm();
 
         if ($this->dispatcher->getParam('id')) {
-            try {
-                $mediaModel = new MediaModel;
-                $media = $mediaModel->getById($this->dispatcher->getParam('id'));
-                $defaults = [
-                    'id' => $media['id'],
-                    'title' => $media['title'],
-                    'description' => $media['description'],
-                    'uploadedBy' => $media['uploaded_by'],
-                ];
-                $defaults = array_merge($defaults, $mediaModel->getById($this->dispatcher->getParam('id')));
-            } catch (\Exception $e) {
-                $this->logger->addError("getById throw exception. message:{$e}");
-                throw $e;
-            }
+            $mediaModel = new MediaModel;
+            $media = $mediaModel->getById($this->dispatcher->getParam('id'));
+            $form->setDefaults($media);
         }
 
-        $this->view->messages = $messages;
-        $this->view->defaults = $defaults;
+        $this->view->form = $form;
     }
 
     /**
      * アセットを作成する
-     *
-     * @throws \Exception
      */
     public function createAssetAction()
     {
@@ -113,8 +90,6 @@ class MediaController extends BaseController
 
     /**
      * ファイルを追加アップロードする
-     *
-     * @throws \Exception
      */
     public function appendFileAction()
     {
@@ -124,11 +99,12 @@ class MediaController extends BaseController
         $messages = [];
 
         try {
-            $blob = "{$_POST['filename']}.{$_POST['extension']}";
-            $blockId = $this->generateBlockId($_POST['index']);
+            $params = $this->request->getPost();
+            $blob = "{$params['filename']}.{$params['extension']}";
+            $blockId = $this->generateBlockId($params['index']);
             $body = file_get_contents($_FILES['file']['tmp_name']);
             $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
-            $this->blobService->createBlobBlock($_POST['container'], $blob, $blockId, $body);
+            $this->blobService->createBlobBlock($params['container'], $blob, $blockId, $body);
             $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
 
             $isSuccess = true;
@@ -147,8 +123,6 @@ class MediaController extends BaseController
 
     /**
      * ブロブブロックをコミットする
-     *
-     * @throws \Exception
      */
     public function commitFileAction()
     {
@@ -158,12 +132,13 @@ class MediaController extends BaseController
         $messages = [];
 
         try {
-            $this->logger->addInfo("comitting file... {$_POST['assetId']}/{$_POST['filename']}");
-            $blob = "{$_POST['filename']}.{$_POST['extension']}";
+            $params = $this->request->getPost();
+            $this->logger->addInfo("comitting file... {$params['asset_id']}/{$params['filename']}");
+            $blob = "{$params['filename']}.{$params['extension']}";
 
             // 最後のファイル追加であればコミット
             $blockIds  = [];
-            for ($i=0; $i<$_POST['blockCount']; $i++) {
+            for ($i=0; $i<$params['blockCount']; $i++) {
                 $blockId = $this->generateBlockId($i);
                 $block = new Block();
                 $block->setBlockId($blockId);
@@ -171,13 +146,13 @@ class MediaController extends BaseController
                 $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
                 $blockIds[] = $block;
             }
-            $response = $this->blobService->commitBlobBlocks($_POST['container'], $blob, $blockIds);
-            $this->logger->addInfo("BlobBlocks commited. assetId:{$_POST['assetId']}");
+            $response = $this->blobService->commitBlobBlocks($params['container'], $blob, $blockIds);
+            $this->logger->addInfo("BlobBlocks commited. assetId:{$params['assetId']}");
 
             // ファイル メタデータの生成
-            $this->mediaService->createFileInfos($_POST['assetId']);
+            $this->mediaService->createFileInfos($params['asset_id']);
             // ここまできて初めて、アセットの準備が完了したことになる
-            $this->logger->addInfo("inputAsset prepared completely. asset:{$_POST['assetId']}");
+            $this->logger->addInfo("inputAsset prepared completely. asset:{$params['asset_id']}");
 
             $isSuccess = true;
         } catch (\Exception $e) {
@@ -195,8 +170,6 @@ class MediaController extends BaseController
 
     /**
      * ファイルをアップロードする
-     * 
-     * @throws \Exception
      */
     public function createAction()
     {
@@ -205,14 +178,13 @@ class MediaController extends BaseController
         $isSaved = false;
         $messages = [];
 
-        $this->logger->addDebug(print_r($_POST, true));
+        $form = new MediaForm();
+        $this->logger->addDebug(print_r($this->request->getPost(), true));
 
-        $isNew = (!$_POST['id']);
-
-        if (empty($messages)) {
+        if ($form->isValid($this->request->getPost())) {
             try {
-                $params = $_POST;
-                $params['eventId'] = $this->auth->getId();
+                $params = $this->request->getPost();
+                $params['event_id'] = $this->auth->getId();
                 $mediaModel = new MediaModel;
                 if ($mediaModel->update($params)) {
                     $isSaved = true;
@@ -221,6 +193,10 @@ class MediaController extends BaseController
             } catch (\Exception $e) {
                 $this->logger->addError("mediaModel->update throw exception. message:{$e}");
                 $messages[] = '動画の登録に失敗しました';
+            }
+        } else {
+            foreach ($form->getMessages() as $message) {
+                $messages[] = "{$message}";
             }
         }
 
@@ -275,10 +251,17 @@ class MediaController extends BaseController
 
         try {
             $mediaModel = new MediaModel;
+            $media = $mediaModel->getById($this->dispatcher->getParam('id'));
             $isSuccess = $mediaModel->deleteById($this->dispatcher->getParam('id'));
         } catch (\Exception $e) {
             $this->logger->addError("mediaModel->deleteById throw exception. message:{$e}");
             $message = '削除に失敗しました';
+        }
+
+        try {
+            $this->mediaService->deleteAsset($media['asset_id']);
+        } catch (\Exception $e) {
+            $this->logger->addError("mediaModel->deleteAsset throw exception. message:{$e}");
         }
 
         echo json_encode([

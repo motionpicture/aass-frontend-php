@@ -145,7 +145,7 @@ var MediaEdit = {
 
         var formData = new FormData();
         formData.append('extension', self.extension);
-        formData.append('assetId', self.assetId);
+        formData.append('asset_id', self.assetId);
         formData.append('container', self.container);
         formData.append('filename', self.filename);
         formData.append('blockCount', self.division);
@@ -233,10 +233,10 @@ var MediaEdit = {
         formData.append('id', $('input[name="id"]', $('form')).val());
         formData.append('title', $('input[name="title"]', $('form')).val());
         formData.append('description', $('textarea[name="description"]', $('form')).val());
-        formData.append('uploadedBy', $('input[name="uploadedBy"]', $('form')).val());
+        formData.append('uploaded_by', $('input[name="uploaded_by"]', $('form')).val());
         formData.append('extension', self.extension);
         formData.append('size', self.size);
-        formData.append('assetId', self.assetId);
+        formData.append('asset_id', self.assetId);
         formData.append('filename', self.filename);
 
         $.ajax({
