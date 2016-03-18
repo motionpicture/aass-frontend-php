@@ -147,7 +147,7 @@ class MediaController extends BaseController
                 $blockIds[] = $block;
             }
             $response = $this->blobService->commitBlobBlocks($params['container'], $blob, $blockIds);
-            $this->logger->addInfo("BlobBlocks commited. assetId:{$params['assetId']}");
+            $this->logger->addInfo("BlobBlocks commited. assetId:{$params['asset_id']}");
 
             // ファイル メタデータの生成
             $this->mediaService->createFileInfos($params['asset_id']);
