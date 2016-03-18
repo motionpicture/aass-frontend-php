@@ -27,6 +27,14 @@ var MediaEdit = {
             for (var i=0; i<this.division; i++) {
                 this.blobBlockUncreatedIndexes.push(i);
             }
+
+            this.assetId = null;
+            this.filename = null;
+            this.division = null;
+            this.createBlobBlockTimer = null;
+            this.blobBlockUncreatedIndexes = [];
+            this.blobBlockCreatedIndexes = [];
+            this.blobBlockCreatingIndexes = [];
         }
     },
 
@@ -59,23 +67,6 @@ var MediaEdit = {
         }
 
         self.createBlobBlock(blob, blockIndex);
-        return;
-
-        /*
-        // ファイルの分割開始
-        var fileReader = new FileReader();
-
-        // ファイル読み込み後アップロード
-        fileReader.onloadend = function(e)
-        {
-            // ステータスチェック
-            if (e.target.readyState == FileReader.DONE) { // DONE == 2
-                self.createBlobBlock(e.target.result, blockIndex);
-            }
-        }
-
-        fileReader.readAsDataURL(blob);
-        */
     },
 
     createBlobBlock: function(fileData, blockIndex)

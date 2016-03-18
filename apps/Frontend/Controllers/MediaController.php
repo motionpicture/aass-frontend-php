@@ -119,10 +119,6 @@ class MediaController extends BaseController
         $messages = [];
 
         try {
-            $this->logger->addDebug(var_export($_POST, true));
-            $this->logger->addDebug(var_export($_FILES, true));
-//             $dataparts = explode(',', $_POST['file'], 2);
-//             $content = base64_decode($dataparts[1]);
             $content = file_get_contents($_FILES['file']['tmp_name']);
             $isSuccess = $this->appendFile($_POST['assetId'], $_POST['filename'], $_POST['extension'], $content, $_POST['index']);
         } catch (\Exception $e) {
@@ -188,11 +184,11 @@ class MediaController extends BaseController
                 $mediaModel = new MediaModel;
                 if ($mediaModel->update($params)) {
                     $isSaved = true;
-                    $this->logger->addInfo("media updated.");
+                    $this->logger->addInfo("media updated. media:" . var_export($params, true));
                 }
             } catch (\Exception $e) {
                 $this->logger->addError("mediaModel->update throw exception. message:{$e}");
-                $messages[] = '更新に失敗しました';
+                $messages[] = '動画の登録に失敗しました';
             }
         }
 
@@ -250,9 +246,9 @@ class MediaController extends BaseController
             }
 
             $blockId = $this->generateBlockId($blockIndex);
-            $this->logger->addInfo("creating BlobBlock... blockId:{$blockId}");
+            $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
             $this->blobService->createBlobBlock(basename($asset->getUri()), $blob, $blockId, $body);
-            $this->logger->addInfo("BlobBlock created. blockId:{$blockId}");
+            $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
 
             $isCreated = true;
         }
