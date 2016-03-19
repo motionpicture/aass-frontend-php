@@ -307,7 +307,10 @@ var MediaEdit = {
             } else {
                 // フォームを空に
                 if (self.isNew) {
-                    $('input,textarea', $('form')).val('');
+                    $('input[name="title"]', $('form')).val('');
+                    $('textarea[name="description"]', $('form')).val('');
+                    $('input[name="uploaded_by"]', $('form')).val('');
+                    $('input[name="file"]', $('form')).val('');
                 }
                 self.showProgress('登録完了');
             }
