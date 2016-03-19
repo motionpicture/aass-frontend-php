@@ -40,7 +40,17 @@ class MediaController extends BaseController
      */
     public function editAction()
     {
-        $form = new MediaForm();
+        $form = new MediaForm(null, [
+            'blockMaxSize' => self::MAX_BLOCK_SIZE
+        ]);
+
+        if ($this->mode == 'dev') {
+            $form->setDefaults([
+                'title' => 'dev',
+                'description' => 'dev',
+                'uploaded_by' => 'tetsu'
+            ]);
+        }
 
         if ($this->dispatcher->getParam('id')) {
             $mediaModel = new MediaModel;

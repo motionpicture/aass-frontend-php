@@ -6,6 +6,7 @@ use Phalcon\Forms\Element\Text;
 use Phalcon\Forms\Element\Hidden;
 use Phalcon\Forms\Element\Textarea;
 use Phalcon\Forms\Element\File;
+use Phalcon\Forms\Element\Select;
 use Phalcon\Validation\Validator\PresenceOf;
 
 class MediaForm extends Form
@@ -69,6 +70,21 @@ class MediaForm extends Form
                 'placeholder' => 'ファイル'
             ]
         );
+        $this->add($element);
+
+        $choices = [];
+        for ($i=0; $i<10; $i++) {
+            $times = $i + 1;
+            $mb = $times * $this->getUserOption('blockMaxSize') / 1024 / 1024;
+            $choices[$times * $this->getUserOption('blockMaxSize')] = "{$mb}mb";
+        }
+        $element = new Select(
+            'chunk_size',
+            $choices,
+            [
+            ]
+        );
+        $element->setLabel('分割サイズ(開発環境のみ変更可能)');
         $this->add($element);
     }
 

@@ -4,20 +4,53 @@
 
 <h1 class="page-header"><?= ($form->get('id')->getValue()) ? "{$form->get('title')->getValue()}の動画編集" : '動画追加' ?></h1>
 
-<div class="progress" style="display:none;">
-    <p id="progressText"></p>
-</div>
+<div id="progressModal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">進捗モーダル</h4>
+            </div>
+            <div class="modal-body">
+                <p></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+<!--                 <button type="button" class="btn btn-primary">Save changes</button> -->
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
 
 <p class="error" style="color: #FF0000;"></p>
 
-<form enctype="multipart/form-data" method="POST">
+<form method="POST">
     <?= $form->render('id') ?>
+    <input type="hidden" name="max_block_size" value="<?= $form->getUserOption('blockMaxSize') ?>">
     <div class="form-group">
-        <?= $form->render('title', ['class' => 'form-control']) ?>
-        <?= $form->render('description', ['class' => 'form-control']) ?>
-        <?= $form->render('uploaded_by', ['class' => 'form-control']) ?>
+        <p>
+            <?= $form->render('title', ['class' => 'form-control']) ?>
+        </p>
+
+        <p>
+            <?= $form->render('description', ['class' => 'form-control']) ?>
+        </p>
+
+        <p>
+            <?= $form->render('uploaded_by', ['class' => 'form-control']) ?>
+        </p>
+
         <?php if (!$form->get('id')->getValue()) { ?>
-        <?= $form->render('file', ['class' => 'form-control']) ?>
+        <?php if ($this->mode != 'prod') { ?>
+        <p>
+        <?= $form->label('chunk_size') ?>
+            <?= $form->render('chunk_size', ['class' => 'form-control']) ?>
+        </p>
+        <?php } ?>
+
+        <p>
+            <?= $form->render('file', ['class' => 'form-control']) ?>
+        </p>
         <?php } ?>
         <button type="button" class="btn btn-primary"><?= $form->getValue('id') ?>登録</button>
     </div>

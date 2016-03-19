@@ -6,44 +6,76 @@ var MediaEdit = {
     assetId: null,
     container: null,
     filename: null,
-    chunkSize: 2 * 2048 * 2048, // byte
+    chunkSize: 4194304, // byte
     division: null,
     createBlobBlockTimer: null,
     blobBlockMaxSize: 4194304, // byte
     blobBlockUncreatedIndexes: [], // 未作成ブロックインデックス
     blobBlockCreatedIndexes: [], // 作成済みブロックインデックス
     blobBlockCreatingIndexes: [], // 作成中ブロックインデックス
+    blobBlockCreatingAjaxes: {}, // ブロック作成ajaxリスト
+    messages: [],
+
+    validate: function()
+    {
+        if (!$('input[name="title"]', $('form')).val()) {
+            this.messages.push('動画名を入力してください');
+        }
+        if (!$('textarea[name="description"]', $('form')).val()) {
+            this.messages.push('動画概要を入力してください');
+        }
+        if (!$('input[name="uploaded_by"]', $('form')).val()) {
+            this.messages.push('動画登録者名を入力してください');
+        }
+        if ($('input[name="file"]', $('form'))[0].files.length == 0) {
+            this.messages.push('ファイルを選択してください');
+        }
+
+        return (this.messages.length < 1);
+    },
 
     initialize: function()
     {
+        var self = this;
+
         this.isNew = (!$('input[name="id"]', $('form')).val());
+        this.assetId = null;
+        this.container = null;
+        this.filename = null;
+        this.chunkSize = $('select[name="chunk_size"]', $('form')).val();
+//        this.chunkSize = 1024;
+        this.division = null;
+        this.createBlobBlockTimer = null;
+        this.blobBlockMaxSize = $('input[name="max_block_size"]', $('form')).val();
+        this.blobBlockUncreatedIndexes = [];
+        this.blobBlockCreatedIndexes = [];
+        this.blobBlockCreatingIndexes = [];
+        this.blobBlockCreatingAjaxes = [];
+        this.messages = [];
 
-        if (this.isNew) {
-            this.assetId = null;
-            this.container = null;
-            this.filename = null;
-            this.division = null;
-            this.createBlobBlockTimer = null;
-            this.blobBlockUncreatedIndexes = [];
-            this.blobBlockCreatedIndexes = [];
-            this.blobBlockCreatingIndexes = [];
+        $('#progressModal').on('hidden.bs.modal', function (e) {
+            self.cancelUpload(self);
+        });
 
-            this.file = $('input[name="file"]', $('form'))[0].files[0];
-            console.log(this.file);
-            f = this.file.name.split('.');
-            this.extension = f[f.length-1];
-            this.size = this.file.size;
-            this.division = Math.ceil(this.size / this.chunkSize);
-            console.log(this.file, this.extension, this.size);
-            for (var i=0; i<this.division; i++) {
-                this.blobBlockUncreatedIndexes.push(i);
-            }
+    },
+
+    cancelUpload: function(context)
+    {
+        var self = context;
+
+        if (self.createBlobBlockTimer != null) {
+            console.log('canceling upload...');
+            alert('キャンセルしました');
+            clearInterval(self.createBlobBlockTimer);
+            $.each(self.blobBlockCreatingAjaxes.keys, function(key, ajax){
+                self.blobBlockCreatingAjaxes[key].abort();
+            });
         }
     },
 
     showProgress: function(text)
     {
-        $('#progressText').html(text);
+        $('#progressModal .modal-body p').html(text);
     },
 
     loadFile: function(context, blockIndex)
@@ -85,7 +117,7 @@ var MediaEdit = {
         var startIndex = blockIndex * Math.floor(self.chunkSize / self.blobBlockMaxSize);
         formData.append('index', startIndex);
 
-        $.ajax({
+        var ajax = $.ajax({
             url: '/media/appendFile',
             method: 'post',
 //            timeout: 25000,
@@ -97,7 +129,6 @@ var MediaEdit = {
         .done(function(data) {
             // エラーメッセー時表示
             if (!data.isSuccess) {
-//                $('p.error').append(data.messages.join('<br>'));
                 // リトライ
                 self.blobBlockUncreatedIndexes.push(blockIndex);
                 self.blobBlockCreatingIndexes.splice(self.blobBlockCreatingIndexes.indexOf(blockIndex), 1);
@@ -116,6 +147,7 @@ var MediaEdit = {
                 // ブロブブロックを全て作成したらコミット
                 if (blobBlockCreatedCount == self.division) {
                     clearInterval(self.createBlobBlockTimer);
+                    self.createBlobBlockTimer = null;
 
                     // コミット
                     self.commitFile();
@@ -138,7 +170,12 @@ var MediaEdit = {
 //            }
         })
         .always(function() {
+            // ajaxリストから削除
+            delete self.blobBlockCreatingAjaxes[blockIndex];
         });
+
+        // ajaxリストに追加
+        self.blobBlockCreatingAjaxes[blockIndex] = ajax;
     },
 
     commitFile: function()
@@ -183,6 +220,17 @@ var MediaEdit = {
     createAsset: function()
     {
         var self = this;
+
+        this.file = $('input[name="file"]', $('form'))[0].files[0];
+        f = this.file.name.split('.');
+        this.extension = f[f.length-1];
+        this.size = this.file.size;
+        this.division = Math.ceil(this.size / this.chunkSize);
+        console.log(this.file, this.extension, this.size);
+        for (var i=0; i<this.division; i++) {
+            this.blobBlockUncreatedIndexes.push(i);
+        }
+
         self.showProgress('ブロブを準備しています...');
 
         $.ajax({
@@ -205,10 +253,11 @@ var MediaEdit = {
                 self.filename = data.params.filename;
 
                 // 定期的にブロブブロック作成
+                self.showProgress(self.chunkSize + 'byteごとに分割アップロードします...');
                 self.createBlobBlockTimer = setInterval(function()
                 {
                     // 回線が遅い場合、アクセスがたまりすぎないように調整(ブラウザ同時接続数を考慮)
-                    if (self.blobBlockCreatingIndexes.length > 5) {
+                    if (self.blobBlockCreatingIndexes.length > 0) {
                         return;
                     }
 
@@ -276,15 +325,18 @@ var MediaEdit = {
 
 $(function(){
     $(document).on('click', 'form button', function(){
-        $('.progress').show();
         $('p.error').html('');
-
         MediaEdit.initialize();
 
-        if (MediaEdit.isNew) {
-            MediaEdit.createAsset();
+        if (MediaEdit.validate()) {
+            if (MediaEdit.isNew) {
+                $('#progressModal').modal('show');
+                MediaEdit.createAsset();
+            } else {
+                MediaEdit.createMedia();
+            }
         } else {
-            MediaEdit.createMedia();
+            $('p.error').append(MediaEdit.messages.join('<br>'));
         }
     });
 });
