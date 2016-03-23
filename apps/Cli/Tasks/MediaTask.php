@@ -210,5 +210,149 @@ EOF;
 
         return $url;
     }
+
+    /**
+     * @see https://msdn.microsoft.com/ja-jp/library/azure/mt427372.aspx
+     */
+    public function copyFileAction()
+    {
+        // エンコード済みのメディアをひとつ取得
+        $media = [];
+
+        $filename = date('YmdHis') . '.mp4';
+        $sourceUrl = 'https://mediasvcdtgv96fwgm0zz.blob.core.windows.net/asset-3b45a965-4f90-4274-b84e-948b5b6ca8a8/motionpicture56e7986a78de9.mp4?sv=2012-02-12&sr=c&si=7cdcd131-fc24-4887-8c80-abb6c542b5d1&sig=%2Fn69d0Zo80QvUjXTB5wEYX4EWpex%2FgS%2B8ZOaJ1Pj1Rk%3D&st=2016-03-23T02%3A42%3A27Z&se=2116-02-28T02%3A42%3A27Z';
+        $url = "https://{$this->config->get('storage_account_name')}.file.core.windows.net/test/test/{$filename}";
+        $httpMethod = 'PUT';
+        $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
+        $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
+        $headers = [
+            'x-ms-version' => '2015-02-21',
+            'x-ms-date' => $dateTimeString,
+            'x-ms-copy-source' => $sourceUrl,
+        ];
+        $queryParams = [
+//             'restype' => 'directory'
+        ];
+        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $httpMethod);
+
+        $headers = array_merge($headers, [
+            'Authorization' => $authorizationHeader,
+            'Content-Length' => 0,
+            'Date' => $dateTimeString,
+        ]);
+
+        $httpHeaders = [];
+        foreach ($headers as $header => $value) {
+            $httpHeaders[] = "{$header}: {$value}";
+        }
+        $options = [
+            CURLOPT_CUSTOMREQUEST => $httpMethod,
+            CURLOPT_HTTPHEADER => $httpHeaders,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_SSL_VERIFYPEER => false
+        ];
+
+        $curl = curl_init($url);
+        curl_setopt_array($curl, $options);
+        $result = curl_exec($curl);
+        $info   = curl_getinfo($curl);
+        $errno = curl_errno($curl);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if (CURLE_OK !== $errno) {
+            $this->logger->addInfo('error:' . var_export($error, true));
+            $this->logger->addInfo('errno:' . var_export($errno, true));
+        }
+
+        $this->logger->addInfo('result:' . var_export($result, true));
+        $this->logger->addInfo('info:' . var_export($info, true));
+        exit;
+    }
+
+    private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod)
+    {
+        $stringToSign = [
+            strtoupper($httpMethod), // VERB
+            '', // Content-Encoding
+            '', // Content-Language
+//             0, // Content-Length
+            '', // Content-Length
+            '', // Content-MD5
+            '', // Content-Type
+            '', // Date
+            '', // If-Modified-Since
+            '', // If-Match
+            '', // If-None-Match
+            '', // If-Unmodified-Since
+            '', // Range
+        ];
+
+        $canonicalizedHeaders = $this->computeCanonicalizedHeaders($headers);
+        $canonicalizedResource = $this->computeCanonicalizedResource($url, $queryParams);
+
+        $stringToSign[] = implode("\n", $canonicalizedHeaders);
+        $stringToSign[] = $canonicalizedResource;
+        $stringToSign = implode("\n", $stringToSign);
+
+        return 'SharedKey ' . $this->config->get('storage_account_name') . ':' . base64_encode(
+            hash_hmac('sha256', $stringToSign, base64_decode($this->config->get('storage_account_key')), true)
+        );
+    }
+
+    private function computeCanonicalizedHeaders($headers)
+    {
+        $canonicalizedHeaders = [];
+        $normalizedHeaders    = [];
+
+        foreach ($headers as $header => $value) {
+            // Convert header to lower case.
+            $header = strtolower($header);
+
+            // Unfold the string by replacing any breaking white space
+            // (meaning what splits the headers, which is \r\n) with a single
+            // space.
+            $value = str_replace("\r\n", ' ', $value);
+
+            // Trim any white space around the colon in the header.
+            $value  = ltrim($value);
+            $header = rtrim($header);
+
+            $normalizedHeaders[$header] = $value;
+        }
+
+        // Sort the headers lexicographically by header name, in ascending order.
+        // Note that each header may appear only once in the string.
+        ksort($normalizedHeaders);
+
+        foreach ($normalizedHeaders as $key => $value) {
+            $canonicalizedHeaders[] = $key . ':' . $value;
+        }
+
+        return $canonicalizedHeaders;
+    }
+
+    private function computeCanonicalizedResource($url, $queryParams)
+    {
+        $queryParams = array_change_key_case($queryParams);
+
+        $canonicalizedResource = '/' . $this->config->get('storage_account_name');
+
+        $canonicalizedResource .= parse_url($url, PHP_URL_PATH);
+
+        if (count($queryParams) > 0) {
+            ksort($queryParams);
+        }
+
+        foreach ($queryParams as $key => $value) {
+            // Grouping query parameters
+            $values = explode(',', $value);
+            sort($values);
+            $separated = implode(',', $values);
+            $canonicalizedResource .= "\n" . $key . ':' . $separated;
+        }
+
+        return $canonicalizedResource;
+    }
 }
 ?>
