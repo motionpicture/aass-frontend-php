@@ -20,14 +20,12 @@ class MediaTask extends BaseTask
     public function encodeAction()
     {
         $media = null;
-        $job = null;
-        $isUpdated = false;
 
         try {
             // アセット作成済みのメディアエンティティを取得
             $mediaModel = new MediaModel;
             $media = $mediaModel->getByStatus(MediaModel::STATUS_ASSET_CREATED);
-            $this->logger->addInfo("media:" . var_export($media, true));
+            $this->logger->addInfo("media prepared. media:" . var_export($media, true));
         } catch (\Exception $e) {
             $this->logger->addError("mediaModel->getByStatus throw exception. message:{$e}");
         }
@@ -35,17 +33,13 @@ class MediaTask extends BaseTask
         if ($media) {
             try {
                 $job = $this->createJob($media);
-
-                if (!is_null($job)) {
-                    $mediaModel->updateJob($media['id'], $job->getId(), $job->getState());
-                    $isUpdated = true;
-                }
+                $this->logger->addinfo('job created. job:' . var_export($job, true));
+                $mediaModel->addJob($media['id'], $job->getId(), $job->getState());
+                $this->logger->addinfo("media updated. id:{$media['id']}");
             } catch (\Exception $e) {
                 $this->logger->addError("fail in creating job. message:{$e}");
             }
         }
-
-        $this->logger->addinfo('encode result:' . var_export($isUpdated, true));
     }
 
     /**
@@ -54,6 +48,22 @@ class MediaTask extends BaseTask
      * @return \WindowsAzure\MediaServices\Models\Job
      */
     private function createJob($media)
+    {
+        $tasks = $this->getTasks($media['filename']);
+        $this->logger->addInfo('tasks prepared. tasks count:' . count($tasks));
+
+        $inputAsset = $this->mediaService->getAsset($media['asset_id']);
+
+        $job = new Job();
+        $job->setName("Aass_job_for_{$media['filename']}");
+        $job = $this->mediaService->createJob($job, [$inputAsset], $tasks);
+
+        $this->logger->addInfo("job created. job:" . var_export($job, true));
+
+        return $job;
+    }
+
+    private function getTasks($filename)
     {
         $tasks = [];
 
@@ -64,7 +74,7 @@ class MediaTask extends BaseTask
             'JobInputAsset(0)',
             'JobOutputAsset(0)',
             Asset::OPTIONS_NONE,
-            "{$media['id']}[thumbnails]"
+            "AassMediaAsset[{$filename}][thumbnails]"
         );
         $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
         $configurationFile  = __DIR__ . '/../../../config/thumbnailConfig.json';
@@ -76,24 +86,24 @@ class MediaTask extends BaseTask
             'JobInputAsset(0)',
             'JobOutputAsset(1)',
             Asset::OPTIONS_NONE,
-            "{$media['id']}[MultipleBitrate1080p]"
+            "AassMediaAsset[{$filename}][H264SingleBitrate1080p]"
+        );
+        $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
+        $task->setConfiguration('H264 Single Bitrate 1080p');
+        $tasks[] = $task;
+
+        // adaptive bitrate mp4 task
+        $taskBody = $this->getMediaServicesTaskBody(
+            'JobInputAsset(0)',
+            'JobOutputAsset(2)',
+            Asset::OPTIONS_NONE,
+            "AassMediaAsset[{$filename}][H264MultipleBitrate1080p]"
         );
         $task = new Task($taskBody, $mediaProcessor->getId(), TaskOptions::NONE);
         $task->setConfiguration('H264 Multiple Bitrate 1080p');
-//         $task->setConfiguration('H264 Single Bitrate 1080p');
         $tasks[] = $task;
 
-        $this->logger->addInfo('tasks has been prepared. tasks count:' . count($tasks));
-
-        $inputAsset = $this->mediaService->getAsset($media['asset_id']);
-
-        $job = new Job();
-        $job->setName("Aass_job_for_{$media['id']}");
-        $job = $this->mediaService->createJob($job, [$inputAsset], $tasks);
-
-        $this->logger->addInfo("job has been created. job:" . var_export($job, true));
-
-        return $job;
+        return $tasks;
     }
 
     /**
@@ -122,7 +132,6 @@ EOF;
     public function checkJobAction()
     {
         $media = null;
-        $job = null;
 
         try {
             // ジョブ作成済みのメディアエンティティを取得
@@ -134,12 +143,7 @@ EOF;
         }
 
         if ($media) {
-            try {
-                // メディアサービスよりジョブを取得
-                $job = $this->mediaService->getJob($media['job_id']);
-            } catch (\Exception $e) {
-                $this->logger->addError("mediaServicesWrapper->getJob() throw exception. message:{$e}");
-            }
+            $job = $this->mediaService->getJob($media['job_id']);
 
             // ジョブのステータスを更新
             if (!is_null($job) && $media['job_state'] != $job->getState()) {
@@ -150,26 +154,108 @@ EOF;
                     if ($state == Job::STATE_FINISHED) {
                         // ジョブのアウトプットアセットを取得
                         $assets = $this->mediaService->getJobOutputMediaAssets($job->getId());
+
+                        $urls = [];
                         $asset = $assets[0];
-                        $url = $this->createUrl($asset->getId(), $media['filename']);
+                        $urls['thumbnail'] = $this->createUrlThumbnail($asset->getId(), $media['filename']);
+                        $asset = $assets[1];
+                        $urls['mp4'] = $this->createUrlMp4($asset->getId(), $media['filename']);
+                        $asset = $assets[2];
+                        $urls['streaming'] = $this->createUrl($asset->getId(), $media['filename']);
 
                         // ジョブに関する情報更新と、URL更新
-                        $mediaModel->updateJobState($media['id'], $state, $url, MediaModel::STATUS_ENCODED);
+                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_FINISHED, $urls);
 
                         // TODO URL通知
 //                         if (!is_null($url)) {
 //                             $this->sendEmail($media);
 //                         }
                     } else if ($state == Job::STATE_ERROR || $state == Job::STATE_CANCELED) {
-                        $mediaModel->updateJobState($media['id'], $state, '', MediaModel::STATUS_ERROR);
+                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_ERROR);
                     } else {
-                        $mediaModel->updateJobState($media['id'], $state, '', MediaModel::STATUS_JOB_CREATED);
+                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_CREATED);
                     }
                 } catch (\Exception $e) {
                     $this->logger->addError("delivering url for streaming throw exception. message:{$e}");
                 }
             }
         }
+    }
+
+    /**
+     * アセットに対してサムネイルURLを生成する
+     *
+     * @param string $assetId
+     * @param string $filename
+     * @return string
+     */
+    private function createUrlThumbnail($assetId, $filename)
+    {
+        // 特定のAssetに対して、同時に5つを超える一意のLocatorを関連付けることはできない
+        // 万が一OnDemandOriginロケーターがあれば削除
+        $locators = $this->mediaService->getAssetLocators($assetId);
+        foreach ($locators as $locator) {
+            if ($locator->getType() == Locator::TYPE_ON_DEMAND_ORIGIN) {
+                $this->mediaService->deleteLocator($locator);
+                $this->logger->addInfo("OnDemandOrigin locator has been deleted. locator:". var_export($locator, true));
+            }
+        }
+
+        // 読み取りアクセス許可を持つAccessPolicyの作成
+        $accessPolicy = new AccessPolicy('ThumbnailPolicy');
+        $accessPolicy->setDurationInMinutes(25920000);
+        $accessPolicy->setPermissions(AccessPolicy::PERMISSIONS_READ);
+        $accessPolicy = $this->mediaService->createAccessPolicy($accessPolicy);
+
+        // サムネイル用のURL作成
+        $locator = new Locator($assetId, $accessPolicy, Locator::TYPE_ON_DEMAND_ORIGIN);
+        $locator->setName('ThumbnailLocator_' . $assetId);
+        $locator->setStartTime(new \DateTime('now -5 minutes'));
+        $locator = $this->mediaService->createLocator($locator);
+
+        // URLを生成
+        $url = "{$locator->getPath()}{$filename}.jpg";
+        $this->logger->addInfo("thumbnail url created. url:{$url}");
+
+        return $url;
+    }
+
+    /**
+     * アセットに対してシングルmp4URLを生成する
+     *
+     * @param string $assetId
+     * @param string $filename
+     * @return string
+     */
+    private function createUrlMp4($assetId, $filename)
+    {
+        // 特定のAssetに対して、同時に5つを超える一意のLocatorを関連付けることはできない
+        // 万が一OnDemandOriginロケーターがあれば削除
+        $locators = $this->mediaService->getAssetLocators($assetId);
+        foreach ($locators as $locator) {
+            if ($locator->getType() == Locator::TYPE_ON_DEMAND_ORIGIN) {
+                $this->mediaService->deleteLocator($locator);
+                $this->logger->addInfo("OnDemandOrigin locator has been deleted. locator:". var_export($locator, true));
+            }
+        }
+
+        // 読み取りアクセス許可を持つAccessPolicyの作成
+        $accessPolicy = new AccessPolicy('MP4Policy');
+        $accessPolicy->setDurationInMinutes(25920000);
+        $accessPolicy->setPermissions(AccessPolicy::PERMISSIONS_READ);
+        $accessPolicy = $this->mediaService->createAccessPolicy($accessPolicy);
+
+        // サムネイル用のURL作成
+        $locator = new Locator($assetId, $accessPolicy, Locator::TYPE_ON_DEMAND_ORIGIN);
+        $locator->setName('MP4Locator_' . $assetId);
+        $locator->setStartTime(new \DateTime('now -5 minutes'));
+        $locator = $this->mediaService->createLocator($locator);
+
+        // URLを生成
+        $url = "{$locator->getPath()}{$filename}.mp4";
+        $this->logger->addInfo("mp4 url created. url:{$url}");
+
+        return $url;
     }
 
     /**
@@ -220,7 +306,7 @@ EOF;
         $media = [];
 
         $filename = date('YmdHis') . '.mp4';
-        $sourceUrl = 'https://mediasvcdtgv96fwgm0zz.blob.core.windows.net/asset-3b45a965-4f90-4274-b84e-948b5b6ca8a8/motionpicture56e7986a78de9.mp4?sv=2012-02-12&sr=c&si=7cdcd131-fc24-4887-8c80-abb6c542b5d1&sig=%2Fn69d0Zo80QvUjXTB5wEYX4EWpex%2FgS%2B8ZOaJ1Pj1Rk%3D&st=2016-03-23T02%3A42%3A27Z&se=2116-02-28T02%3A42%3A27Z';
+        $sourceUrl = 'https://mediasvcdtgv96fwgm0zz.blob.core.windows.net/asset-cd405971-5def-4a79-83b2-3e398dee6983/motionpicture56f10a55dd6e4.mp4?sv=2012-02-12&sr=c&si=d191b0f9-b48e-44d8-a1ea-0b645a83be13&sig=ODtGhAEC7etB5pWQnOYBgVhCvpTwGNCIRYOH%2Fb78IzI%3D&st=2016-03-23T09%3A37%3A11Z&se=2116-02-28T09%3A37%3A11Z';
         $url = "https://{$this->config->get('storage_account_name')}.file.core.windows.net/test/test/{$filename}";
         $httpMethod = 'PUT';
         $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));

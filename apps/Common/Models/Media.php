@@ -13,7 +13,9 @@ class Media extends Base
     public $extension; // ファイル拡張子
     public $playtime_string; // 再生時間
     public $playtime_seconds; // 再生時間
-    public $url; // ストリーミングURL
+    public $url_thumbnail; // サムネイルURL
+    public $url_mp4; // MP4URL
+    public $url_streaming; // ストリーミングURL
     public $asset_id; // アセットID
     public $job_id; // ジョブID
     public $job_state; // ジョブ進捗
@@ -23,18 +25,20 @@ class Media extends Base
 
     const STATUS_ASSET_CREATED = 1; // アセット作成済み(エンコード待ち)
     const STATUS_JOB_CREATED = 2; // ジョブ作成済み(エンコード中)
-    const STATUS_ENCODED = 3; // エンコード済み
-    const STATUS_DELETED = 4; // 削除済み
-    const STATUS_ERROR = 5; // エンコード失敗
+    const STATUS_JOB_FINISHED = 3; // ジョブ完了
+    const STATUS_ENCODED = 4; // JPEG2000エンコード済み
+    const STATUS_ERROR = 8; // エンコード失敗
+    const STATUS_DELETED = 9; // 削除済み
 
     public static function status2string($status)
     {
         $strings = [
             self::STATUS_ASSET_CREATED => 'アップロード完了',
-            self::STATUS_JOB_CREATED => 'エンコード中',
+            self::STATUS_JOB_CREATED => 'ジョブ進行中',
+            self::STATUS_JOB_FINISHED => 'ジョブ完了',
             self::STATUS_ENCODED => 'エンコード完了',
-            self::STATUS_DELETED => '削除済み',
             self::STATUS_ERROR => 'エンコード失敗',
+            self::STATUS_DELETED => '削除済み',
         ];
 
         return (isset($strings[$status])) ? $strings[$status] : null;
@@ -42,7 +46,10 @@ class Media extends Base
 
     public function getListByEventId($eventId)
     {
-        $statement = $this->db->prepare('SELECT * FROM media WHERE event_id = :eventId AND status <> :status');
+        $query = <<<EOF
+SELECT * FROM media WHERE event_id = :eventId AND status <> :status
+EOF;
+        $statement = $this->db->prepare($query);
         $statement->execute([
             'eventId' => $eventId,
             'status' => self::STATUS_DELETED

@@ -5,7 +5,13 @@ class Media extends \Aass\Common\Models\Media
 {
     public function getByStatus($status)
     {
-        $statement = $this->db->prepare('SELECT id, title, status, filename, extension, asset_id, job_id, job_state FROM media WHERE status = :status');
+        $query = <<<EOF
+SELECT id, title, status, filename, extension, asset_id, job_id, job_state, created_at
+ FROM media
+ WHERE status = :status
+ ORDER BY created_at ASC
+EOF;
+        $statement = $this->db->prepare($query);
         $statement->execute([
             'status' => $status
         ]);
@@ -13,9 +19,14 @@ class Media extends \Aass\Common\Models\Media
         return $statement->fetch();
     }
 
-    public function updateJob($id, $jobId, $jobState)
+    public function addJob($id, $jobId, $jobState)
     {
-        $statement = $this->db->prepare('UPDATE media SET status = :status, job_id = :jobId, job_state = :jobState, updated_at = NOW() WHERE id = :id');
+        $query = <<<EOF
+UPDATE media SET
+ status = :status, job_id = :jobId, job_state = :jobState, updated_at = NOW()
+ WHERE id = :id
+EOF;
+        $statement = $this->db->prepare($query);
         $result = $statement->execute([
             ':id' => $id,
             ':jobId' => $jobId,
@@ -26,12 +37,20 @@ class Media extends \Aass\Common\Models\Media
         return $result;
     }
 
-    public function updateJobState($id, $state, $url, $status)
+    public function updateJobState($id, $state, $status, $urls = [])
     {
-        $statement = $this->db->prepare('UPDATE media SET url = :url, job_state = :jobState, status = :status, updated_at = NOW() WHERE id = :id');
+        $query = <<<EOF
+UPDATE media SET
+ url_thumbnail = :urlThumbnail, url_mp4 = :urlMp4, url_streaming = :urlStreaming,
+ job_state = :jobState, status = :status, updated_at = NOW()
+ WHERE id = :id
+EOF;
+        $statement = $this->db->prepare($query);
         $result = $statement->execute([
             ':id' => $id,
-            ':url' => $url,
+            ':urlThumbnail' => (isset($urls['thumbnail'])) ? $urls['thumbnail'] : null,
+            ':urlMp4' => (isset($urls['mp4'])) ? $urls['mp4'] : null,
+            ':urlStreaming' => (isset($urls['streaming'])) ? $urls['streaming'] : null,
             ':jobState' => $state,
             ':status' => $status
         ]);
