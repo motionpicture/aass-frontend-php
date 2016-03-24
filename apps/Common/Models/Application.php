@@ -4,7 +4,7 @@ namespace Aass\Common\Models;
 class Application extends Base
 {
     public $id;
-    public $mediaId;
+    public $media_id;
     public $status; // ステータス
 
     const STATUS_CREATED = 1; // 申請中

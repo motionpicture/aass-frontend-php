@@ -19,6 +19,24 @@ EOF;
         return $statement->fetch();
     }
 
+    public function getListByStatus($status, $limit)
+    {
+        $query = <<<EOF
+SELECT id, title, status, filename, extension, url_thumbnail, url_mp4, url_streaming, asset_id, job_id, job_state, created_at
+ FROM media
+ WHERE status = :status
+ ORDER BY created_at ASC
+ LIMIT :limit
+EOF;
+        $statement = $this->db->prepare($query);
+        $statement->execute([
+            'status' => $status,
+            'limit' => $limit,
+        ]);
+
+        return $statement->fetchAll();
+    }
+
     public function addJob($id, $jobId, $jobState)
     {
         $query = <<<EOF
@@ -52,6 +70,22 @@ EOF;
             ':urlMp4' => (isset($urls['mp4'])) ? $urls['mp4'] : null,
             ':urlStreaming' => (isset($urls['streaming'])) ? $urls['streaming'] : null,
             ':jobState' => $state,
+            ':status' => $status
+        ]);
+
+        return $result;
+    }
+
+    public function updateStatus($id, $status)
+    {
+        $query = <<<EOF
+UPDATE media SET
+ status = :status, updated_at = NOW()
+ WHERE id = :id
+EOF;
+        $statement = $this->db->prepare($query);
+        $result = $statement->execute([
+            ':id' => $id,
             ':status' => $status
         ]);
 

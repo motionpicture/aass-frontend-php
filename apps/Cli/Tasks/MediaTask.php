@@ -308,11 +308,50 @@ class MediaTask extends BaseTask
 
         if ($media) {
             try {
-                $to = "mp4/{$media['filename']}.{$media['extension']}";
+                $to = MediaModel::getFilePath4Jpeg2000Ready($media['filename']);
                 $sourceUrl = $media['url_mp4'];
-                $this->fileService->copyFromUrl($sourceUrl, $to);
+
+                if ($this->fileService->copyFromUrl($sourceUrl, $to)) {
+                    $this->logger->addInfo("changing status to copied... id:{$media['id']}");
+                    $mediaModel->updateStatus($media['id'], MediaModel::STATUS_JPEG2000_READY);
+                } else {
+                    $this->logger->addInfo("changing status to error... id:{$media['id']}");
+                    $mediaModel->updateStatus($media['id'], MediaModel::STATUS_ERROR);
+                }
             } catch (\Exception $e) {
                 $this->logger->addError("copy failed. message:{$e}");
+            }
+        }
+    }
+
+    /**
+     * jpeg2000エンコード進捗を確認する
+     */
+    public function checkJpeg2000EncodeAction()
+    {
+        $media = null;
+
+        try {
+            $mediaModel = new MediaModel;
+            $media = $mediaModel->getByStatus(MediaModel::STATUS_JPEG2000_READY);
+            $this->logger->addInfo("media:" . var_export($media, true));
+        } catch (\Exception $e) {
+            $this->logger->addError("fail in getByStatus {$e}");
+        }
+
+        if ($media) {
+            try {
+                $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded($media['filename']));
+//                 $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded('test'));
+                $this->logger->addDebug(var_export($properties, true));
+
+                if (!is_null($properties)) {
+                    $this->logger->addInfo("changing status to encoded... id:{$media['id']}");
+                } else {
+                    $this->logger->addInfo("not encoded yet. id:{$media['id']}");
+                }
+            } catch (\Exception $e) {
+                $this->logger->addError("getFile failed. message:{$e}");
             }
         }
     }

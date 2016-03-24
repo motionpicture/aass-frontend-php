@@ -44,30 +44,87 @@ class AzureFileService
         $options = [
             CURLOPT_CUSTOMREQUEST => $httpMethod,
             CURLOPT_HTTPHEADER => $httpHeaders,
-            CURLOPT_RETURNTRANSFER => 1,
-            CURLOPT_SSL_VERIFYPEER => false
         ];
 
-        $this->send($url, $options);
+        list($body, $info) = $this->send($url, $options);
+
+        return (isset($info['http_code']) && $info['http_code'] == '202');
+    }
+
+    public function getFileProperties($file)
+    {
+        $url = "https://{$this->accountName}." . self::BASE_DNS_NAME . "/{$file}";
+        $httpMethod = 'HEAD';
+        $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
+        $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
+        $headers = [
+            'x-ms-version' => self::API_LATEST_VERSION,
+            'x-ms-date' => $dateTimeString,
+        ];
+        $queryParams = [];
+        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $httpMethod);
+
+        $headers = array_merge($headers, [
+            'Authorization' => $authorizationHeader,
+            'Content-Length' => 0,
+            'Date' => $dateTimeString,
+        ]);
+
+        $httpHeaders = [];
+        foreach ($headers as $header => $value) {
+            $httpHeaders[] = "{$header}: {$value}";
+        }
+        $options = [
+            CURLOPT_CUSTOMREQUEST => $httpMethod,
+            CURLOPT_HTTPHEADER => $httpHeaders,
+            CURLOPT_NOBODY => true
+        ];
+
+        list($body, $info) = $this->send($url, $options);
+
+        // レスポンスヘッダーを取り出す
+        $responseHeaders = null;
+        if (isset($info['http_code']) && $info['http_code'] == '200') {
+            $responseHeaderString = substr($body, 0 , $info['header_size']);
+            $responseHeadersWithColon = explode("\n", $responseHeaderString);
+
+            $responseHeaders = [];
+            foreach ($responseHeadersWithColon as $line) {
+                if (strpos($line, ':') !== false) {
+                    list($key, $value) = explode(':', $line, 2);
+                    $responseHeaders[$key] = trim($value);
+                }
+            }
+        }
+
+        return $responseHeaders;
     }
 
     private function send($url, $options)
     {
+        $defaultOptions = [
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HEADER => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
+        ];
+        $options = $defaultOptions + $options;
+
         $curl = curl_init($url);
         curl_setopt_array($curl, $options);
-        $result = curl_exec($curl);
+        $body = curl_exec($curl);
         $info   = curl_getinfo($curl);
         $errno = curl_errno($curl);
         $error = curl_error($curl);
         curl_close($curl);
 
         if (CURLE_OK !== $errno) {
-            $this->logger->addInfo('error:' . var_export($error, true));
-            $this->logger->addInfo('errno:' . var_export($errno, true));
+            throw new \RuntimeException($error, $errno);
         }
 
-        $this->logger->addInfo('result:' . var_export($result, true));
+        $this->logger->addInfo('body:' . var_export($body, true));
         $this->logger->addInfo('info:' . var_export($info, true));
+        return [$body, $info];
     }
 
     private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod)

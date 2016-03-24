@@ -4,7 +4,7 @@ namespace Aass\Common\Models;
 class Media extends Base
 {
     public $id;
-    public $eventId;
+    public $event_id;
     public $title; // 動画名
     public $description; // 動画概要
     public $uploaded_by; // 動画登録者名
@@ -23,12 +23,16 @@ class Media extends Base
     public $job_end_at; // ジョブ終了日時
     public $deleted_at; // 削除日時
 
-    const STATUS_ASSET_CREATED = 1; // アセット作成済み(エンコード待ち)
-    const STATUS_JOB_CREATED = 2; // ジョブ作成済み(エンコード中)
+    const STATUS_ASSET_CREATED = 1; // アセット作成済み(ジョブ待ち)
+    const STATUS_JOB_CREATED = 2; // ジョブ作成済み(mp4エンコード中)
     const STATUS_JOB_FINISHED = 3; // ジョブ完了
-    const STATUS_ENCODED = 4; // JPEG2000エンコード済み
+    const STATUS_JPEG2000_READY = 4; // JPEG2000エンコード待ち
+    const STATUS_JPEG2000_ENCODED = 5; // JPEG2000エンコード済み
     const STATUS_ERROR = 8; // エンコード失敗
     const STATUS_DELETED = 9; // 削除済み
+
+    const AZURE_FILE_SHARE_NAME_JPEG2000_READY = 'mp4';
+    const AZURE_FILE_SHARE_NAME_JPEG2000_ENCODED = 'jpeg2000';
 
     public static function status2string($status)
     {
@@ -36,7 +40,8 @@ class Media extends Base
             self::STATUS_ASSET_CREATED => 'アップロード完了',
             self::STATUS_JOB_CREATED => 'ジョブ進行中',
             self::STATUS_JOB_FINISHED => 'ジョブ完了',
-            self::STATUS_ENCODED => 'エンコード完了',
+            self::STATUS_JPEG2000_READY => 'JPEG2000エンコード待ち',
+            self::STATUS_JPEG2000_ENCODED => 'JPEG2000エンコード完了',
             self::STATUS_ERROR => 'エンコード失敗',
             self::STATUS_DELETED => '削除済み',
         ];
@@ -56,5 +61,15 @@ EOF;
         ]);
 
         return $statement->fetchAll();
+    }
+
+    public static function getFilePath4Jpeg2000Ready($filename)
+    {
+        return self::AZURE_FILE_SHARE_NAME_JPEG2000_READY . "/{$filename}.mp4";
+    }
+
+    public static function getFilePath4Jpeg2000Encoded($filename)
+    {
+        return self::AZURE_FILE_SHARE_NAME_JPEG2000_ENCODED . "/{$filename}.jpeg2000";
     }
 }
