@@ -6,7 +6,7 @@ class Media extends \Aass\Common\Models\Media
     public function getByStatus($status)
     {
         $query = <<<EOF
-SELECT id, title, status, filename, extension, asset_id, job_id, job_state, created_at
+SELECT id, title, status, filename, extension, url_thumbnail, url_mp4, url_streaming, asset_id, job_id, job_state, created_at
  FROM media
  WHERE status = :status
  ORDER BY created_at ASC

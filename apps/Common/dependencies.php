@@ -61,19 +61,17 @@ $di->set('db', function() use ($di)
     ]);
 });
 
-// db
-$di->set('azureTable', function() use ($di)
-{
-    $connectionString =  sprintf(
-        'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
-        'https',
-        $di->get('config')->get('storage_account_name'),
-        $di->get('config')->get('storage_account_key')
-    );
-    return \WindowsAzure\Common\ServicesBuilder::getInstance()->createTableService($connectionString);
-});
+// $di->set('azureTable', function() use ($di)
+// {
+//     $connectionString =  sprintf(
+//         'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
+//         'https',
+//         $di->get('config')->get('storage_account_name'),
+//         $di->get('config')->get('storage_account_key')
+//     );
+//     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createTableService($connectionString);
+// });
 
-// mediaService
 $di->set('mediaService', function() use ($di)
 {
     $settings = new \WindowsAzure\Common\Internal\MediaServicesSettings(
@@ -85,7 +83,6 @@ $di->set('mediaService', function() use ($di)
     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createMediaServicesService($settings);
 });
 
-// mediaService
 $di->set('blobService', function() use ($di)
 {
     $connectionString =  sprintf(
@@ -96,5 +93,13 @@ $di->set('blobService', function() use ($di)
     );
 
     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService($connectionString);
+});
+
+$di->set('fileService', function() use ($di)
+{
+    return new \Aass\Common\AzureFileService(
+        $di->get('config')->get('storage_account_name'),
+        $di->get('config')->get('storage_account_key')
+    );
 });
 ?>
