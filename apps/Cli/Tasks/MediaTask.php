@@ -55,7 +55,7 @@ class MediaTask extends BaseTask
         $inputAsset = $this->mediaService->getAsset($media['asset_id']);
 
         $job = new Job();
-        $job->setName("Aass_job_for_{$media['filename']}");
+        $job->setName("AassJob[{$media['filename']}]");
         $job = $this->mediaService->createJob($job, [$inputAsset], $tasks);
 
         $this->logger->addInfo("job created. job:" . var_export($job, true));
@@ -116,14 +116,7 @@ class MediaTask extends BaseTask
      * @return string
      */
     private function getMediaServicesTaskBody($inputAsset, $outputAsset, $outputAssetOptions, $outputAssetName) {
-        $xml = <<<EOF
-<?xml version="1.0" encoding="utf-8"?>
-<taskBody>
-    <inputAsset>{$inputAsset}</inputAsset>
-    <outputAsset assetCreationOptions="{$outputAssetOptions}" assetName="{$outputAssetName}">{$outputAsset}</outputAsset>
-</taskBody>';
-EOF;
-        return $xml;
+        return '<?xml version="1.0" encoding="utf-8"?><taskBody><inputAsset>' . $inputAsset . '</inputAsset><outputAsset assetCreationOptions="' . $outputAssetOptions . '" assetName="' . $outputAssetName . '">' . $outputAsset . '</outputAsset></taskBody>';
     }
 
     /**

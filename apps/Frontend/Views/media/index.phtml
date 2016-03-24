@@ -20,7 +20,7 @@
     <td><?= $media['uploaded_by'] ?></td>
     <td><?= $media['size'] ?></td>
     <td><?= \Aass\Frontend\Models\Media::status2string($media['status']) ?></td>
-    <td><?php if ($media['url']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url']) ?>">ストリーミング</a><?php } ?></td>
+    <td><?php if ($media['url_streaming']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url_streaming']) ?>">ストリーミング</a><?php } ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
         <input type="hidden" name="application_id" value="<?= ($application && $application['media_id'] == $media['id']) ? $application['id'] : '' ?>">

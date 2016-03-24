@@ -20,6 +20,7 @@
     "require": {
         "swiftmailer/swiftmailer": "@stable",
         "monolog/monolog": "@stable",
+        "pear/mail_mime-decode": "1.5.5",
         "microsoft/windowsazure": "*",
         "jamesheinrich/getid3": "dev-master"
     },
