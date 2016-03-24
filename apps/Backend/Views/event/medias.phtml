@@ -1,32 +1,47 @@
 <?php require __DIR__ . '/../header.phtml' ?>
 
+<?php require __DIR__ . '/../header.phtml' ?>
+
+<script src="/js/media/index.js"></script>
+
 <h1 class="page-header"><?= $event['user_id'] ?>さんの動画一覧</h1>
 
 <table class="table table-striped">
 <tbody>
 <tr>
-    <th>タイトル</th>
-    <th>登録者名</th>
-    <th>サイズ(byte)</th>
+    <th>タイトル<br>作成者<br>サイズ<br>作成日時</th>
     <th>ステータス</th>
-    <th>URL</th>
+    <th>thumbnail</th>
     <th>各種機能</th>
+    <th>申請関連</th>
 </tr>
 <?php foreach ($medias as $media) { ?>
 <tr>
-    <td><?= $media['title'] ?></td>
-    <td><?= $media['uploaded_by'] ?></td>
-    <td><?= $media['size'] ?></td>
-    <td><?= \Aass\Backend\Models\Media::status2string($media['status']) ?></td>
-    <td><?php if ($media['url']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url']) ?>">ストリーミング</a><?php } ?></td>
+    <td>
+    <?= $media['title'] ?><br>
+    <?= $media['uploaded_by'] ?><br>
+    <?= $media['size'] ?><br>
+    <?= $media['created_at'] ?><br>
+    </td>
+    <td><?= \Aass\Frontend\Models\Media::status2string($media['status']) ?></td>
+    <td><?php if ($media['url_thumbnail']) { ?><img width="100px" src="<?= $media['url_thumbnail'] ?>"><?php } ?></td>
     <td>
         <input type="hidden" name="id" value="<?= $media['id'] ?>">
         <input type="hidden" name="application_id" value="<?= ($application && $application['media_id'] == $media['id']) ? $application['id'] : '' ?>">
-        <a href="<?= $this->url->get(['for' => 'mediaDownload', 'id' => $media['id']]) ?>" target="_blank" class="">ダウンロード</a>
-
+        <?php if ($media['url_mp4']) { ?><a target="_blank" href="<?= $media['url_mp4'] ?>">mp4 download</a><br><?php } ?>
+        <?php if ($media['url_streaming']) { ?><a target="_blank" href="http://aka.ms/azuremediaplayer?url=<?= urlencode($media['url_streaming']) ?>">ストリーミング</a><br><?php } ?>
+    </td>
+    <td>
         <span class="no_apply_media"<?php if (!$application) { ?> style="display:none;"<?php } ?>>
         <?php if ($application && $application['media_id'] == $media['id']) { ?>
-        <?= \Aass\Backend\Models\Application::status2string($application['status']) ?>
+        <?= \Aass\Frontend\Models\Application::status2string($application['status']) ?>
+        <?php } else { ?>申請不可<br>
+        <?php } ?>
+        </span>
+
+        <span class="apply_media"<?php if ($application) { ?> style="display:none;"<?php } ?>>
+        <?php if ($media['status'] == \Aass\Frontend\Models\Media::STATUS_JPEG2000_ENCODED) { ?>
+        <a href="javascript:void(0)">動画申請</a><br>
         <?php } else { ?>申請不可
         <?php } ?>
         </span>

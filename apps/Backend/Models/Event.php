@@ -8,13 +8,17 @@ class Event extends \Aass\Common\Models\Event
         $query = <<<EOF
 SELECT
     e.id, e.user_id, e.place, e.email
-    , a.media_id AS media_id, a.media_title AS media_title, a.media_uploaded_by AS media_uploaded_by, a.media_url AS media_url, a.media_status AS media_status, a.media_job_end_at AS media_job_end_at
+    , a.media_id AS media_id, a.media_title AS media_title, a.media_uploaded_by AS media_uploaded_by
+    , a.media_url_thumbnail AS media_url_thumbnail, a.media_url_mp4 AS media_url_mp4, a.media_url_streaming AS media_url_streaming
+    , a.media_status AS media_status, a.media_job_end_at AS media_job_end_at
     , a.id AS application_id, a.status AS application_status
  FROM event AS e
  LEFT JOIN (
      SELECT
          a2.id, a2.media_id, a2.status
-         , m.event_id, m.title AS media_title, m.uploaded_by AS media_uploaded_by, m.url AS media_url, m.status AS media_status, m.job_end_at AS media_job_end_at
+         , m.event_id, m.title AS media_title, m.uploaded_by AS media_uploaded_by
+         , m.url_thumbnail AS media_url_thumbnail, m.url_mp4 AS media_url_mp4, m.url_streaming AS media_url_streaming
+         , m.status AS media_status, m.job_end_at AS media_job_end_at
      FROM application AS a2 LEFT JOIN media AS m ON m.id = a2.media_id
      WHERE m.status <> :mediaStatus AND a2.status <> :applicationStatus
  ) a ON a.event_id = e.id

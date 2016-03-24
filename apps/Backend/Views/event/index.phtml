@@ -17,7 +17,7 @@
     <td><a href="<?= $this->url->get(['for' => 'eventEdit', 'id' => $event['id']]) ?>"><?= $event['user_id'] ?></a></td>
     <td class="media_detail">
     <?= \Aass\Backend\Models\Media::status2string($event['media_status']) ?>
-    <?php if ($event['media_status'] == \Aass\Backend\Models\Media::STATUS_ENCODED) { ?>
+    <?php if ($event['media_status'] == \Aass\Backend\Models\Media::STATUS_JPEG2000_ENCODED) { ?>
     <?= $event['media_job_end_at'] ?><br>
     <?= $event['media_uploaded_by'] ?>
     <?php } ?>
