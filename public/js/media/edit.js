@@ -42,11 +42,10 @@ var MediaEdit = {
         this.assetId = null;
         this.container = null;
         this.filename = null;
-        this.chunkSize = $('select[name="chunk_size"]', $('form')).val();
-//        this.chunkSize = 1024;
+        this.chunkSize = parseInt($('select[name="chunk_size"]', $('form')).val());
         this.division = null;
         this.createBlobBlockTimer = null;
-        this.blobBlockMaxSize = $('input[name="max_block_size"]', $('form')).val();
+        this.blobBlockMaxSize = parseInt($('input[name="max_block_size"]', $('form')).val());
         this.blobBlockUncreatedIndexes = [];
         this.blobBlockCreatedIndexes = [];
         this.blobBlockCreatingIndexes = [];
@@ -224,9 +223,9 @@ var MediaEdit = {
         this.file = $('input[name="file"]', $('form'))[0].files[0];
         f = this.file.name.split('.');
         this.extension = f[f.length-1];
-        this.size = this.file.size;
+        this.size = parseInt(this.file.size);
         this.division = Math.ceil(this.size / this.chunkSize);
-        console.log(this.file, this.extension, this.size);
+        console.log(this.file, this.extension, this.size, this.division);
         for (var i=0; i<this.division; i++) {
             this.blobBlockUncreatedIndexes.push(i);
         }
@@ -263,6 +262,7 @@ var MediaEdit = {
 
                     if (self.blobBlockUncreatedIndexes.length > 0) {
                         var nextIndex = self.blobBlockUncreatedIndexes[0];
+                    	console.log('nextIndex:' + nextIndex);
                         self.blobBlockCreatingIndexes.push(nextIndex);
                         self.blobBlockUncreatedIndexes.shift();
                         self.loadFile(self, nextIndex);

@@ -1,39 +1,65 @@
 <?php
-namespace Aass\Common;
+namespace Aass\Common\WindowsAzure\Common;
 
-class AzureFileService
+class ServiceRestProxy
 {
-    const BASE_DNS_NAME = 'file.core.windows.net';
-    const API_LATEST_VERSION = '2015-02-21';
-
+    private $uri;
     private $accountName;
     private $accountKey;
-    private $logger;
+    protected $logger;
 
-    public function __construct($accountName, $accountKey)
+    const API_LATEST_VERSION = '2015-04-05';
+
+    /**
+     * Initializes new ServiceRestProxy object.
+     *
+     * @param string      $uri            The storage account uri.
+     * @param string      $accountName    The name of the account.
+     */
+    public function __construct($uri, $accountName, $accountKey)
     {
+        $this->uri = $uri;
         $this->accountName = $accountName;
         $this->accountKey = $accountKey;
         $this->logger = \Phalcon\DI::getDefault()->get('logger');
     }
 
-    public function copyFromUrl($sourceUrl, $to)
+    public function getUri()
     {
-        $url = "https://{$this->accountName}." . self::BASE_DNS_NAME . "/{$to}";
-        $httpMethod = 'PUT';
+        return $this->uri;
+    }
+
+    public function getAccountName()
+    {
+        return $this->accountName;
+    }
+
+    public function getAccountKey()
+    {
+        return $this->accountKey;
+    }
+
+    protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null)
+    {
+        $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
+
         $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
         $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
-        $headers = [
+        $defaultHeaders = [
             'x-ms-version' => self::API_LATEST_VERSION,
             'x-ms-date' => $dateTimeString,
-            'x-ms-copy-source' => $sourceUrl,
         ];
-        $queryParams = [];
-        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $httpMethod);
+
+        $headers = array_merge($headers, $defaultHeaders);
+
+        // Authorizationヘッダーを作成
+        $contentLength = (!is_null($body)) ? strlen($body) : 0;
+        $contentType = (!is_null($body)) ? 'application/x-www-form-urlencoded' : '';
+        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $method, $contentLength, $contentType);
 
         $headers = array_merge($headers, [
             'Authorization' => $authorizationHeader,
-            'Content-Length' => 0,
+            'Content-Length' => $contentLength,
             'Date' => $dateTimeString,
         ]);
 
@@ -41,74 +67,21 @@ class AzureFileService
         foreach ($headers as $header => $value) {
             $httpHeaders[] = "{$header}: {$value}";
         }
+
         $options = [
-            CURLOPT_CUSTOMREQUEST => $httpMethod,
+            CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $httpHeaders,
-        ];
-
-        list($body, $info) = $this->send($url, $options);
-
-        return (isset($info['http_code']) && $info['http_code'] == '202');
-    }
-
-    public function getFileProperties($file)
-    {
-        $url = "https://{$this->accountName}." . self::BASE_DNS_NAME . "/{$file}";
-        $httpMethod = 'HEAD';
-        $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
-        $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
-        $headers = [
-            'x-ms-version' => self::API_LATEST_VERSION,
-            'x-ms-date' => $dateTimeString,
-        ];
-        $queryParams = [];
-        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $httpMethod);
-
-        $headers = array_merge($headers, [
-            'Authorization' => $authorizationHeader,
-            'Content-Length' => 0,
-            'Date' => $dateTimeString,
-        ]);
-
-        $httpHeaders = [];
-        foreach ($headers as $header => $value) {
-            $httpHeaders[] = "{$header}: {$value}";
-        }
-        $options = [
-            CURLOPT_CUSTOMREQUEST => $httpMethod,
-            CURLOPT_HTTPHEADER => $httpHeaders,
-            CURLOPT_NOBODY => true
-        ];
-
-        list($body, $info) = $this->send($url, $options);
-
-        // レスポンスヘッダーを取り出す
-        $responseHeaders = null;
-        if (isset($info['http_code']) && $info['http_code'] == '200') {
-            $responseHeaderString = substr($body, 0 , $info['header_size']);
-            $responseHeadersWithColon = explode("\n", $responseHeaderString);
-
-            $responseHeaders = [];
-            foreach ($responseHeadersWithColon as $line) {
-                if (strpos($line, ':') !== false) {
-                    list($key, $value) = explode(':', $line, 2);
-                    $responseHeaders[$key] = trim($value);
-                }
-            }
-        }
-
-        return $responseHeaders;
-    }
-
-    private function send($url, $options)
-    {
-        $defaultOptions = [
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_HEADER => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
         ];
-        $options = $defaultOptions + $options;
+        if (!is_null($body)) {
+            $options[CURLOPT_POSTFIELDS] = $body;
+        }
+        if ($method == 'HEAD') {
+            $options[CURLOPT_NOBODY] = true;
+        }
 
         $curl = curl_init($url);
         curl_setopt_array($curl, $options);
@@ -124,19 +97,20 @@ class AzureFileService
 
         $this->logger->addInfo('body:' . var_export($body, true));
         $this->logger->addInfo('info:' . var_export($info, true));
+
         return [$body, $info];
     }
 
-    private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod)
+    private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod, $contentLength = 0, $contentType = '')
     {
         $stringToSign = [
             strtoupper($httpMethod), // VERB
             '', // Content-Encoding
             '', // Content-Language
 //             0, // Content-Length
-            '', // Content-Length
+            ($contentLength > 0) ? $contentLength : '', // Content-Length
             '', // Content-MD5
-            '', // Content-Type
+            $contentType, // Content-Type
             '', // Date
             '', // If-Modified-Since
             '', // If-Match
@@ -150,6 +124,7 @@ class AzureFileService
 
         $stringToSign[] = implode("\n", $canonicalizedHeaders);
         $stringToSign[] = $canonicalizedResource;
+        $this->logger->addDebug('stringToSign:' . var_export($stringToSign, true));
         $stringToSign = implode("\n", $stringToSign);
 
         return "SharedKey {$this->accountName}:"

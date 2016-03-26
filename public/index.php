@@ -65,7 +65,7 @@ $di->set('logger', function() use ($di)
     $formatter = new \Monolog\Formatter\LineFormatter(null, null, true); // 第３引数で改行を有効に
     $stream = new \Monolog\Handler\StreamHandler(
         __DIR__ . "/../logs/{$di->get('mode')}/Frontend/" . date('Ymd') . ".log",
-        ($di->get('mode') == 'dev') ? \Monolog\Logger::DEBUG : \Monolog\Logger::INFO
+        ($di->get('mode') == 'dev' || $di->get('mode') == 'test') ? \Monolog\Logger::DEBUG : \Monolog\Logger::INFO
     );
     $stream->setFormatter($formatter);
     $logger = new \Monolog\Logger("AassFrontend[{$di->get('mode')}] [PID:{$pid}]");

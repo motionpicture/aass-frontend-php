@@ -108,6 +108,8 @@ class MediaController extends BaseController
         $isSuccess = false;
         $messages = [];
 
+        $this->logger->addDebug('POST:' . var_export($_POST, true));
+        $this->logger->addDebug('FILE:' . var_export($_FILES, true));
         try {
             $params = $this->request->getPost();
 
@@ -137,7 +139,8 @@ class MediaController extends BaseController
                 }
                 $blockId = $this->generateBlockId($params['index'] + $counter);
                 $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
-                $this->blobService->createBlobBlock($container, $blob, $blockId, $body);
+//                 $this->blobService->createBlobBlock($container, $blob, $blockId, $body);
+                $this->blobService2->putBlock($container, $blob, $blockId, $body);
                 $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
                 $counter++;
             }
@@ -173,15 +176,19 @@ class MediaController extends BaseController
 
             // 最後のファイル追加であればコミット
             $blockIds  = [];
+//             for ($i=0; $i<$params['blockCount']; $i++) {
+//                 $blockId = $this->generateBlockId($i);
+//                 $block = new Block();
+//                 $block->setBlockId($blockId);
+//                 $block->setType('Uncommitted');
+//                 $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
+//                 $blockIds[] = $block;
+//             }
+//             $response = $this->blobService->commitBlobBlocks($params['container'], $blob, $blockIds);
             for ($i=0; $i<$params['blockCount']; $i++) {
-                $blockId = $this->generateBlockId($i);
-                $block = new Block();
-                $block->setBlockId($blockId);
-                $block->setType('Uncommitted');
-                $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-                $blockIds[] = $block;
+                $blockIds[] = $this->generateBlockId($i);
             }
-            $response = $this->blobService->commitBlobBlocks($params['container'], $blob, $blockIds);
+            $response = $this->blobService2->putBlockList($params['container'], $blob, $blockIds);
             $this->logger->addInfo("BlobBlocks commited. assetId:{$params['asset_id']}");
 
             // ファイル メタデータの生成
@@ -293,11 +300,12 @@ class MediaController extends BaseController
             $message = '削除に失敗しました';
         }
 
-        try {
-            $this->mediaService->deleteAsset($media['asset_id']);
-        } catch (\Exception $e) {
-            $this->logger->addError("mediaModel->deleteAsset throw exception. message:{$e}");
-        }
+        // TODO アセットはバッチ処理で削除
+//         try {
+//             $this->mediaService->deleteAsset($media['asset_id']);
+//         } catch (\Exception $e) {
+//             $this->logger->addError("mediaModel->deleteAsset throw exception. message:{$e}");
+//         }
 
         echo json_encode([
             'isSuccess' => $isSuccess,

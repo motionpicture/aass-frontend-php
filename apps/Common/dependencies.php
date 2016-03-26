@@ -95,9 +95,17 @@ $di->set('blobService', function() use ($di)
     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService($connectionString);
 });
 
+$di->set('blobService2', function() use ($di)
+{
+    return \Aass\Common\WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService(
+        $di->get('config')->get('storage_account_name'),
+        $di->get('config')->get('storage_account_key')
+    );
+});
+
 $di->set('fileService', function() use ($di)
 {
-    return new \Aass\Common\AzureFileService(
+    return \Aass\Common\WindowsAzure\Common\ServicesBuilder::getInstance()->createFileService(
         $di->get('config')->get('storage_account_name'),
         $di->get('config')->get('storage_account_key')
     );
