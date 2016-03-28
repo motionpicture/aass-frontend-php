@@ -38,7 +38,10 @@ class BlobRestProxy extends ServiceRestProxy
         $this->_SingleBlobUploadThresholdInBytes = $val;
     }
 
-    public function listContainers($options = null)
+    /**
+     * List Containers 操作には、指定されたアカウントのコンテナーの一覧が返されます。
+     */
+    public function listContainers()
     {
         $path = '/';
         $method = 'GET';
@@ -47,33 +50,41 @@ class BlobRestProxy extends ServiceRestProxy
             'comp' => 'list',
             'include' => 'metadata'
         ];
+        $statusCode = 200;
 
-        list($body, $info) = $this->send($method, $headers, $queryParams, [], $path, null);
+        $body = $this->send($method, $headers, $queryParams, [], $path, null, $statusCode);
 
-        // レスポンスヘッダーを取り出す
-        $responseHeaders = null;
-        $responseHeaderBody = null;
-        $containers = null;
-        if (isset($info['http_code']) && $info['http_code'] == '200') {
-            $responseHeaderString = substr($body, 0 , $info['header_size']);
-            $responseHeaderBody = substr($body, $info['header_size']);
-            $responseHeadersWithColon = explode("\n", $responseHeaderString);
-
-            $responseHeaders = [];
-            foreach ($responseHeadersWithColon as $line) {
-                if (strpos($line, ':') !== false) {
-                    list($key, $value) = explode(':', $line, 2);
-                    $responseHeaders[$key] = trim($value);
-                }
-            }
-        }
-
-        if (!is_null($responseHeaderBody)) {
-            $containers = new \SimpleXMLElement($responseHeaderBody);
-        }
-        return $containers;
+        return (!is_null($body)) ? new \SimpleXMLElement($body) : $containers;
     }
 
+    /**
+     * 新しい BLOB を作成するか、コンテナー内の既存の BLOB を置換します。
+     * 
+     * @param string $container
+     * @param string $blob
+     * @param string $body
+     */
+    public function putBlob($container, $blob, $body)
+    {
+        $path = "/{$container}/{$blob}";
+        $method = 'PUT';
+        $headers = [
+            'x-ms-blob-type' => 'BlockBlob'
+        ];
+        $queryParams = [];
+        $statusCode = 201;
+
+        $this->send($method, $headers, $queryParams, [], $path, $body, $statusCode);
+    }
+
+    /**
+     * コミットする新しいブロックをブロック BLOB の一部として作成します。
+     * 
+     * @param string $container
+     * @param string $blob
+     * @param string $blockId
+     * @param string $body
+     */
     public function putBlock($container, $blob, $blockId, $body)
     {
         $path = "/{$container}/{$blob}";
@@ -83,12 +94,18 @@ class BlobRestProxy extends ServiceRestProxy
             'comp' => 'block',
             'blockid' => base64_encode($blockId),
         ];
+        $statusCode = 201;
 
-        list($body, $info) = $this->send($method, $headers, $queryParams, [], $path, $body);
-
-        return (isset($info['http_code']) && $info['http_code'] == '201');
+        $this->send($method, $headers, $queryParams, [], $path, $body, $statusCode);
     }
 
+    /**
+     * ブロック BLOB を構成するブロック ID のセットを指定することで、BLOB をコミットします。
+     * 
+     * @param string $container
+     * @param string $blob
+     * @param array $blockIds
+     */
     public function putBlockList($container, $blob, $blockIds)
     {
         $path = "/{$container}/{$blob}";
@@ -97,6 +114,7 @@ class BlobRestProxy extends ServiceRestProxy
         $queryParams = [
             'comp' => 'blocklist',
         ];
+        $statusCode = 201;
 
         $body = '<?xml version="1.0" encoding="utf-8"?><BlockList>';
         foreach ($blockIds as $blockId) {
@@ -105,8 +123,6 @@ class BlobRestProxy extends ServiceRestProxy
         $body .= '</BlockList>';
         $this->logger->addDebug("body:{$body}");
 
-        list($body, $info) = $this->send($method, $headers, $queryParams, [], $path, $body);
-
-        return (isset($info['http_code']) && $info['http_code'] == '201');
+        $this->send($method, $headers, $queryParams, [], $path, $body, $statusCode);
     }
 }

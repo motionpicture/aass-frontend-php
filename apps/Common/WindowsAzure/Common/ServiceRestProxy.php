@@ -1,5 +1,7 @@
 <?php
 namespace Aass\Common\WindowsAzure\Common;
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Request;
 
 class ServiceRestProxy
 {
@@ -9,12 +11,14 @@ class ServiceRestProxy
     protected $logger;
 
     const API_LATEST_VERSION = '2015-04-05';
+    const URL_ENCODED_CONTENT_TYPE = 'application/x-www-form-urlencoded';
 
     /**
      * Initializes new ServiceRestProxy object.
      *
-     * @param string      $uri            The storage account uri.
-     * @param string      $accountName    The name of the account.
+     * @param string $uri
+     * @param string $accountName
+     * @param string $accountKey
      */
     public function __construct($uri, $accountName, $accountKey)
     {
@@ -39,7 +43,20 @@ class ServiceRestProxy
         return $this->accountKey;
     }
 
-    protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null)
+    /**
+     * Sends HTTP request with the specified parameters.
+     *
+     * @param string $method         HTTP method used in the request
+     * @param array  $headers        HTTP headers.
+     * @param array  $queryParams    URL query parameters.
+     * @param array  $postParameters The HTTP POST parameters.
+     * @param string $path           URL path
+     * @param string $body           Request body
+     * @param int    $statusCode     Expected status code received in the response
+     *
+     * @return string
+     */
+    protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
     {
         $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
 
@@ -54,51 +71,43 @@ class ServiceRestProxy
 
         // Authorizationヘッダーを作成
         $contentLength = (!is_null($body)) ? strlen($body) : 0;
-        $contentType = (!is_null($body)) ? 'application/x-www-form-urlencoded' : '';
+        $contentType = (!is_null($body)) ? self::URL_ENCODED_CONTENT_TYPE : '';
         $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $method, $contentLength, $contentType);
 
         $headers = array_merge($headers, [
             'Authorization' => $authorizationHeader,
             'Content-Length' => $contentLength,
+            'Content-Type' => $contentType,
             'Date' => $dateTimeString,
         ]);
 
-        $httpHeaders = [];
-        foreach ($headers as $header => $value) {
-            $httpHeaders[] = "{$header}: {$value}";
-        }
-
         $options = [
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_HTTPHEADER => $httpHeaders,
-            CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_HEADER => true,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
         ];
         if (!is_null($body)) {
             $options[CURLOPT_POSTFIELDS] = $body;
         }
-        if ($method == 'HEAD') {
-            $options[CURLOPT_NOBODY] = true;
-        }
 
-        $curl = curl_init($url);
-        curl_setopt_array($curl, $options);
-        $body = curl_exec($curl);
-        $info   = curl_getinfo($curl);
-        $errno = curl_errno($curl);
-        $error = curl_error($curl);
-        curl_close($curl);
+        $client = new Client();
+        $request = new Request($method, $url, $headers);
+        $response = $client->send($request, [
+            'curl' => $options
+        ]);
 
-        if (CURLE_OK !== $errno) {
-            throw new \RuntimeException($error, $errno);
-        }
+        $this->logger->addDebug("status code:{$response->getStatusCode()}");
+        $this->logger->addDebug("reason phrase:{$response->getReasonPhrase()}");
+        $this->logger->addDebug('headers:' . var_export($response->getHeaders(), true));
+        $this->logger->addDebug('body:' . var_export($response->getBody(), true));
 
-        $this->logger->addInfo('body:' . var_export($body, true));
-        $this->logger->addInfo('info:' . var_export($info, true));
+        self::throwIfError(
+            $response->getStatusCode(),
+            $response->getReasonPhrase(),
+            $response->getBody(),
+            [$statusCode]
+        );
 
-        return [$body, $info];
+        return ($method == 'HEAD') ? $response->getHeaders() : $response->getBody();
     }
 
     private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod, $contentLength = 0, $contentType = '')
@@ -184,5 +193,23 @@ class ServiceRestProxy
         }
 
         return $canonicalizedResource;
+    }
+
+    /**
+     * Throws LogicException if the recieved status code is not expected.
+     * 
+     * @param string $actual   The received status code.
+     * @param string $reason   The reason phrase.
+     * @param string $message  The detailed message (if any).
+     * @param array  $expected The expected status codes.
+     * 
+     * @return none
+     * @throws LogicException
+     */
+    public static function throwIfError($actual, $reason, $message, $expected)
+    {
+        if (!in_array($actual, $expected)) {
+            throw new \LogicException(sprintf("Fail:\nCode: %s\nValue: %s\ndetails (if any): %s.", $actual, $reason, $message));
+        }
     }
 }

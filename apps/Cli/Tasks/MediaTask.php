@@ -311,7 +311,7 @@ class MediaTask extends BaseTask
                 $to = MediaModel::getFilePath4Jpeg2000Ready($media['filename']);
                 $sourceUrl = $media['url_mp4'];
 
-                if ($this->fileService->copyFromUrl($sourceUrl, $to)) {
+                if ($this->fileService->copyFile($sourceUrl, $to)) {
                     $this->logger->addInfo("changing status to copied... id:{$media['id']}");
                     $mediaModel->updateStatus($media['id'], MediaModel::STATUS_JPEG2000_READY);
                 } else {
@@ -342,7 +342,6 @@ class MediaTask extends BaseTask
         if ($media) {
             try {
                 $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded($media['filename']));
-//                 $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded('test'));
                 $this->logger->addDebug(var_export($properties, true));
 
                 if (!is_null($properties)) {

@@ -4,44 +4,40 @@ use Aass\Common\WindowsAzure\Common\ServiceRestProxy;
 
 class FileRestProxy extends ServiceRestProxy
 {
-    public function copyFromUrl($sourceUrl, $to)
+    /**
+     * このストレージ アカウントに対象のファイルにコピー元 blob またはファイルをコピーします。
+     * 
+     * @param string $source ソース ファイルまたは blob の URL を指定の長さは最大で 2 KB です。
+     * @param string $to     https://myaccount.file.core.windows.net/{$to}
+     */
+    public function copyFile($source, $to)
     {
         $path = "/{$to}";
         $method = 'PUT';
         $headers = [
-            'x-ms-copy-source' => $sourceUrl,
+            'x-ms-copy-source' => $source,
         ];
         $queryParams = [];
+        $statusCode = 202;
 
-        list($body, $info) = $this->send($method, $headers, $queryParams, [], $path, $null);
-
-        return (isset($info['http_code']) && $info['http_code'] == '202');
+        $this->send($method, $headers, $queryParams, [], $path, null, $statusCode);
     }
 
+    /**
+     * ファイルのすべてのシステム プロパティとユーザー定義メタデータを返します。
+     * 
+     * @param string $file https://myaccount.file.core.windows.net/{$file}
+     */
     public function getFileProperties($file)
     {
         $path = "/{$file}";
         $method = 'HEAD';
         $headers = [];
         $queryParams = [];
+        $statusCode = 200;
 
-        list($body, $info) = $this->send($method, $headers, $queryParams, [], $path, null);
+        $result = $this->send($method, $headers, $queryParams, [], $path, null, 200);
 
-        // レスポンスヘッダーを取り出す
-        $responseHeaders = null;
-        if (isset($info['http_code']) && $info['http_code'] == '200') {
-            $responseHeaderString = substr($body, 0 , $info['header_size']);
-            $responseHeadersWithColon = explode("\n", $responseHeaderString);
-
-            $responseHeaders = [];
-            foreach ($responseHeadersWithColon as $line) {
-                if (strpos($line, ':') !== false) {
-                    list($key, $value) = explode(':', $line, 2);
-                    $responseHeaders[$key] = trim($value);
-                }
-            }
-        }
-
-        return $responseHeaders;
+        return $result;
     }
 }

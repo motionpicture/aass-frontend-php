@@ -24,7 +24,8 @@
         "swiftmailer/swiftmailer": "@stable",
         "monolog/monolog": "@stable",
         "microsoft/windowsazure": "*",
-        "jamesheinrich/getid3": "dev-master"
+        "jamesheinrich/getid3": "dev-master",
+        "guzzlehttp/guzzle": "dev-master"
     },
     "minimum-stability": "dev",
     "autoload": {

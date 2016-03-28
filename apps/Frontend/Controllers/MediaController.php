@@ -139,8 +139,7 @@ class MediaController extends BaseController
                 }
                 $blockId = $this->generateBlockId($params['index'] + $counter);
                 $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
-//                 $this->blobService->createBlobBlock($container, $blob, $blockId, $body);
-                $this->blobService2->putBlock($container, $blob, $blockId, $body);
+                $this->blobService->putBlock($container, $blob, $blockId, $body);
                 $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
                 $counter++;
             }
@@ -174,21 +173,11 @@ class MediaController extends BaseController
             $this->logger->addInfo("comitting file... {$params['asset_id']}/{$params['filename']}");
             $blob = "{$params['filename']}.{$params['extension']}";
 
-            // 最後のファイル追加であればコミット
             $blockIds  = [];
-//             for ($i=0; $i<$params['blockCount']; $i++) {
-//                 $blockId = $this->generateBlockId($i);
-//                 $block = new Block();
-//                 $block->setBlockId($blockId);
-//                 $block->setType('Uncommitted');
-//                 $this->logger->addDebug("comitting... blockId:{$block->getBlockId()}");
-//                 $blockIds[] = $block;
-//             }
-//             $response = $this->blobService->commitBlobBlocks($params['container'], $blob, $blockIds);
             for ($i=0; $i<$params['blockCount']; $i++) {
                 $blockIds[] = $this->generateBlockId($i);
             }
-            $response = $this->blobService2->putBlockList($params['container'], $blob, $blockIds);
+            $this->blobService->putBlockList($params['container'], $blob, $blockIds);
             $this->logger->addInfo("BlobBlocks commited. assetId:{$params['asset_id']}");
 
             // ファイル メタデータの生成

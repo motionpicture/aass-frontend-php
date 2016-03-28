@@ -62,7 +62,7 @@ var MediaEdit = {
     {
         var self = context;
 
-        if (self.createBlobBlockTimer != null) {
+        if (self.createBlobBlockTimer !== null) {
             console.log('canceling upload...');
             alert('キャンセルしました');
             clearInterval(self.createBlobBlockTimer);
