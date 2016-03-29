@@ -138,6 +138,11 @@ $di->set('router', function()
         'action' => 'apply'
     ])->setName('mediaApply');
 
+    $router->add('/scaleOutTest', [
+        'controller' => 'index',
+        'action' => 'scaleOutTest'
+    ])->setName('scaleOutTest');
+
     return $router;
 });
 

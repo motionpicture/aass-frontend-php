@@ -11,7 +11,12 @@ class IndexController extends BaseController
 
     public function scaleOutTestAction()
     {
-        $this->logger->addDebug("Server IP address:{$_SERVER['LOCAL_ADDR']}");
-        echo "Server IP address:{$_SERVER['LOCAL_ADDR']}";
-        exit;
+        if ($this->request->has('self')) {
+            echo $_SERVER['REMOTE_ADDR'];
+            exit;
+        }
+
+        $url = (empty($_SERVER["HTTPS"]) ? "http://" : "https://") . "{$_SERVER["HTTP_HOST"]}{$_SERVER["REQUEST_URI"]}?self";
+        echo 'IP address is ' . file_get_contents($url);
+        return false;
     }}

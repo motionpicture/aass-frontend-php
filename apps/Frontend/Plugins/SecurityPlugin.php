@@ -16,16 +16,18 @@ class SecurityPlugin extends Plugin
         $controller = $dispatcher->getControllerName();
         $action = $dispatcher->getActionName();
 
-        if ($controller != 'auth' || $action != 'login') {
-            if (is_null($auth)) {
-                $this->flash->error("You don't have access to this module");
-                $dispatcher->forward([
-                    'controller' => 'auth',
-                    'action'     => 'login'
-                ]);
+        if (($controller == 'auth' && $action == 'login') || ($controller == 'index' && $action == 'scaleOutTest')) {
+             return;
+        }
 
-                return false;
-            }
+        if (is_null($auth)) {
+            $this->flash->error("You don't have access to this module");
+            $dispatcher->forward([
+                'controller' => 'auth',
+                'action'     => 'login'
+            ]);
+
+            return false;
         }
     }
 
