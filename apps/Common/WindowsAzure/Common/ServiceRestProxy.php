@@ -13,12 +13,7 @@ class ServiceRestProxy
     const API_LATEST_VERSION = '2015-04-05';
 
     const URL_ENCODED_CONTENT_TYPE = 'application/x-www-form-urlencoded';
-    const XML_CONTENT_TYPE         = 'application/xml';
-    const JSON_CONTENT_TYPE        = 'application/json';
     const BINARY_FILE_TYPE         = 'application/octet-stream';
-    const XML_ATOM_CONTENT_TYPE    = 'application/atom+xml';
-    const HTTP_TYPE                = 'application/http';
-    const MULTIPART_MIXED_TYPE     = 'multipart/mixed';
 
     /**
      * Initializes new ServiceRestProxy object.
@@ -51,7 +46,7 @@ class ServiceRestProxy
     }
 
     /**
-     * Sends HTTP request with the specified parameters.
+     * Sends HTTP request(cURLを使用)
      *
      * @param string $method         HTTP method used in the request
      * @param array  $headers        HTTP headers.
@@ -63,11 +58,11 @@ class ServiceRestProxy
      *
      * @return string
      */
-    protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
+    protected function send2($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
     {
         $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
         $contentLength = (!is_null($body)) ? strlen($body) : 0;
-        $contentType = (!is_null($body)) ? self::BINARY_FILE_TYPE : '';
+        $contentType = (!is_null($body)) ? self::URL_ENCODED_CONTENT_TYPE : '';
 
         $headers = $this->createHttpHeaders($url, $method, $headers, $queryParams, $postParameters, $contentLength, $contentType);
 
@@ -84,21 +79,6 @@ class ServiceRestProxy
         if ($method == 'HEAD') {
             $options[CURLOPT_NOBODY] = true;
         }
-
-        /*
-        $curl = curl_init($url);
-        curl_setopt_array($curl, $options);
-        $body = curl_exec($curl);
-        $info   = curl_getinfo($curl);
-        $errno = curl_errno($curl);
-        $error = curl_error($curl);
-        curl_close($curl);
-        if (CURLE_OK !== $errno) {
-            throw new \RuntimeException($error, $errno);
-        }
-
-        return ($method == 'HEAD') ? $info : $body;
-        */
 
         $client = new Client();
         $request = new Request($method, $url, $headers);
@@ -120,11 +100,24 @@ class ServiceRestProxy
         return ($method == 'HEAD') ? $response->getHeaders() : $response->getBody();
     }
 
-    protected function send2($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
+    /**
+     * Sends HTTP request(stream_context_createを使用)
+     *
+     * @param string $method         HTTP method used in the request
+     * @param array  $headers        HTTP headers.
+     * @param array  $queryParams    URL query parameters.
+     * @param array  $postParameters The HTTP POST parameters.
+     * @param string $path           URL path
+     * @param string $body           Request body
+     * @param int    $statusCode     Expected status code received in the response
+     *
+     * @return string
+     */
+    protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
     {
         $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
         $contentLength = (!is_null($body)) ? strlen($body) : 0;
-        $contentType = (!is_null($body)) ? self::BINARY_FILE_TYPE : '';
+        $contentType = (!is_null($body)) ? self::URL_ENCODED_CONTENT_TYPE : '';
 
         $headers = $this->createHttpHeaders($url, $method, $headers, $queryParams, $postParameters, $contentLength, $contentType);
 
@@ -173,7 +166,8 @@ class ServiceRestProxy
             'Content-Length' => $contentLength,
             'Content-Type' => $contentType,
             'Date' => $dateTimeString,
-            'User-Agent' => 'Aass Azure ServiceRestProxy'
+            'User-Agent' => 'Aass Azure ServiceRestProxy',
+//             'transfer-encoding' => 'chunked'
         ]);
 
         return $headers;
