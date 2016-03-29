@@ -11,7 +11,14 @@ class ServiceRestProxy
     protected $logger;
 
     const API_LATEST_VERSION = '2015-04-05';
+
     const URL_ENCODED_CONTENT_TYPE = 'application/x-www-form-urlencoded';
+    const XML_CONTENT_TYPE         = 'application/xml';
+    const JSON_CONTENT_TYPE        = 'application/json';
+    const BINARY_FILE_TYPE         = 'application/octet-stream';
+    const XML_ATOM_CONTENT_TYPE    = 'application/atom+xml';
+    const HTTP_TYPE                = 'application/http';
+    const MULTIPART_MIXED_TYPE     = 'multipart/mixed';
 
     /**
      * Initializes new ServiceRestProxy object.
@@ -59,42 +66,45 @@ class ServiceRestProxy
     protected function send($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
     {
         $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
-
-        $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
-        $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
-        $defaultHeaders = [
-            'x-ms-version' => self::API_LATEST_VERSION,
-            'x-ms-date' => $dateTimeString,
-        ];
-
-        $headers = array_merge($headers, $defaultHeaders);
-
-        // Authorizationヘッダーを作成
         $contentLength = (!is_null($body)) ? strlen($body) : 0;
-        $contentType = (!is_null($body)) ? self::URL_ENCODED_CONTENT_TYPE : '';
-        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $method, $contentLength, $contentType);
+        $contentType = (!is_null($body)) ? self::BINARY_FILE_TYPE : '';
 
-        $headers = array_merge($headers, [
-            'Authorization' => $authorizationHeader,
-            'Content-Length' => $contentLength,
-            'Content-Type' => $contentType,
-            'Date' => $dateTimeString,
-        ]);
+        $headers = $this->createHttpHeaders($url, $method, $headers, $queryParams, $postParameters, $contentLength, $contentType);
 
         $options = [
+//             CURLOPT_CUSTOMREQUEST => $method,
+//             CURLOPT_HTTPHEADER => $httpHeaders,
+            CURLOPT_RETURNTRANSFER => false,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
         ];
         if (!is_null($body)) {
             $options[CURLOPT_POSTFIELDS] = $body;
         }
+        if ($method == 'HEAD') {
+            $options[CURLOPT_NOBODY] = true;
+        }
+
+        /*
+        $curl = curl_init($url);
+        curl_setopt_array($curl, $options);
+        $body = curl_exec($curl);
+        $info   = curl_getinfo($curl);
+        $errno = curl_errno($curl);
+        $error = curl_error($curl);
+        curl_close($curl);
+        if (CURLE_OK !== $errno) {
+            throw new \RuntimeException($error, $errno);
+        }
+
+        return ($method == 'HEAD') ? $info : $body;
+        */
 
         $client = new Client();
         $request = new Request($method, $url, $headers);
         $response = $client->send($request, [
             'curl' => $options
         ]);
-
         $this->logger->addDebug("status code:{$response->getStatusCode()}");
         $this->logger->addDebug("reason phrase:{$response->getReasonPhrase()}");
         $this->logger->addDebug('headers:' . var_export($response->getHeaders(), true));
@@ -108,6 +118,65 @@ class ServiceRestProxy
         );
 
         return ($method == 'HEAD') ? $response->getHeaders() : $response->getBody();
+    }
+
+    protected function send2($method, $headers, $queryParams, $postParameters, $path, $body = null, $statusCode = 200)
+    {
+        $url = "{$this->uri}{$path}?" . http_build_query($queryParams);
+        $contentLength = (!is_null($body)) ? strlen($body) : 0;
+        $contentType = (!is_null($body)) ? self::BINARY_FILE_TYPE : '';
+
+        $headers = $this->createHttpHeaders($url, $method, $headers, $queryParams, $postParameters, $contentLength, $contentType);
+
+        $request = new \HTTP_Request2();
+        $request->setUrl($url);
+        $request->setMethod($method);
+        $request->setHeader($headers);
+        $request->setBody($body);
+        $request->setConfig([
+            'use_brackets'    => true,
+            'ssl_verify_peer' => false,
+            'ssl_verify_host' => false,
+        ]);
+        $response = $request->send();
+        $this->logger->addDebug("status code:{$response->getStatus()}");
+        $this->logger->addDebug("reason phrase:{$response->getReasonPhrase()}");
+        $this->logger->addDebug('headers:' . var_export($response->getHeader(), true));
+        $this->logger->addDebug('body:' . var_export($response->getBody(), true));
+
+        self::throwIfError(
+            $response->getStatus(),
+            $response->getReasonPhrase(),
+            $response->getBody(),
+            [$statusCode]
+        );
+
+        return ($method == 'HEAD') ? $response->getHeader() : $response->getBody();
+    }
+
+    private function createHttpHeaders($url, $method, $headers, $queryParams, $postParameters, $contentLength, $contentType)
+    {
+        $dateTime = new \DateTime('now', new \DateTimeZone('GMT'));
+        $dateTimeString = $dateTime->format('D, d M Y H:i:s T');
+        $defaultHeaders = [
+            'x-ms-version' => self::API_LATEST_VERSION,
+            'x-ms-date' => $dateTimeString,
+        ];
+
+        $headers = array_merge($headers, $defaultHeaders);
+
+        // Authorizationヘッダーを作成
+        $authorizationHeader = $this->getAuthorizationHeader($headers, $url, $queryParams, $method, $contentLength, $contentType);
+
+        $headers = array_merge($headers, [
+            'Authorization' => $authorizationHeader,
+            'Content-Length' => $contentLength,
+            'Content-Type' => $contentType,
+            'Date' => $dateTimeString,
+            'User-Agent' => 'Aass Azure ServiceRestProxy'
+        ]);
+
+        return $headers;
     }
 
     private function getAuthorizationHeader($headers, $url, $queryParams, $httpMethod, $contentLength = 0, $contentType = '')

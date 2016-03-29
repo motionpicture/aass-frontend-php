@@ -140,6 +140,7 @@ class MediaController extends BaseController
                 $blockId = $this->generateBlockId($params['index'] + $counter);
                 $this->logger->addDebug("creating BlobBlock... blockId:{$blockId}");
                 $this->blobService->putBlock($container, $blob, $blockId, $body);
+//                 $this->blobService2->createBlobBlock($container, $blob, $blockId, $body);
                 $this->logger->addDebug("BlobBlock created. blockId:{$blockId}");
                 $counter++;
             }

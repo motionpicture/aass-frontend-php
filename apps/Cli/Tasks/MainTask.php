@@ -50,6 +50,7 @@ class MainTask extends BaseTask
         $blob = 'test.txt';
         $body = 'test';
         $this->blobService->putBlob($container, $blob, $body);
+//         $this->blobService2->createBlockBlob($container, $blob, $body);
     }
 
     public function copyFileAction()

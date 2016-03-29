@@ -89,13 +89,16 @@ $di->set('blobService', function() use ($di)
         $di->get('config')->get('storage_account_name'),
         $di->get('config')->get('storage_account_key')
     );
+});
 
-//     $connectionString =  sprintf(
-//         'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
-//         'https',
-//         $di->get('config')->get('storage_account_name'),
-//         $di->get('config')->get('storage_account_key')
-//     );
+$di->set('blobService2', function() use ($di)
+{
+        $connectionString =  sprintf(
+            'DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s',
+            'https',
+            $di->get('config')->get('storage_account_name'),
+            $di->get('config')->get('storage_account_key')
+        );
     return \WindowsAzure\Common\ServicesBuilder::getInstance()->createBlobService($connectionString);
 });
 
@@ -106,4 +109,3 @@ $di->set('fileService', function() use ($di)
         $di->get('config')->get('storage_account_key')
     );
 });
-?>
