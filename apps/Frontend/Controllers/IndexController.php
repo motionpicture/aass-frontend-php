@@ -13,10 +13,13 @@ class IndexController extends BaseController
     {
         if ($this->request->has('self')) {
             echo $_SERVER['REMOTE_ADDR'];
-            exit;
+            return false;
         }
 
         $url = (empty($_SERVER["HTTPS"]) ? "http://" : "https://") . "{$_SERVER["HTTP_HOST"]}{$_SERVER["REQUEST_URI"]}?self";
-        echo 'IP address is ' . file_get_contents($url);
+        $ipAddress = file_get_contents($url);
+        $this->logger->addDebug("IP address is {$ipAddress}");
+        echo "IP address is {$ipAddress}";
         return false;
-    }}
+    }
+}
