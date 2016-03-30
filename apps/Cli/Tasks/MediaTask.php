@@ -19,25 +19,20 @@ class MediaTask extends BaseTask
      */
     public function encodeAction()
     {
-        $media = null;
+        $mediaModel = new MediaModel;
+        $medias = $mediaModel->getListByStatus(MediaModel::STATUS_ASSET_CREATED, 10);
+        $this->logger->addInfo("medias:" . var_export($medias, true));
 
-        try {
-            // アセット作成済みのメディアエンティティを取得
-            $mediaModel = new MediaModel;
-            $media = $mediaModel->getByStatus(MediaModel::STATUS_ASSET_CREATED);
-            $this->logger->addInfo("media prepared. media:" . var_export($media, true));
-        } catch (\Exception $e) {
-            $this->logger->addError("mediaModel->getByStatus throw exception. message:{$e}");
-        }
-
-        if ($media) {
-            try {
-                $job = $this->createJob($media);
-                $this->logger->addinfo('job created. job:' . var_export($job, true));
-                $mediaModel->addJob($media['id'], $job->getId(), $job->getState());
-                $this->logger->addinfo("media updated. id:{$media['id']}");
-            } catch (\Exception $e) {
-                $this->logger->addError("fail in creating job. message:{$e}");
+        if (!empty($medias)) {
+            foreach ($medias as $media) {
+                try {
+                    $job = $this->createJob($media);
+                    $this->logger->addInfo('job created. job:' . var_export($job, true));
+                    $mediaModel->addJob($media['id'], $job->getId(), $job->getState());
+                    $this->logger->addInfo("media added job. id:{$media['id']}");
+                } catch (\Exception $e) {
+                    $this->logger->addError("createJob failed. message:{$e}");
+                }
             }
         }
     }
@@ -124,52 +119,50 @@ class MediaTask extends BaseTask
      */
     public function checkJobAction()
     {
-        $media = null;
+        $mediaModel = new MediaModel;
+        $medias = $mediaModel->getListByStatus(MediaModel::STATUS_JOB_CREATED, 10);
+        $this->logger->addInfo("medias:" . var_export($medias, true));
 
-        try {
-            // ジョブ作成済みのメディアエンティティを取得
-            $mediaModel = new MediaModel;
-            $media = $mediaModel->getByStatus(MediaModel::STATUS_JOB_CREATED);
-            $this->logger->addInfo("media:" . var_export($media, true));
-        } catch (\Exception $e) {
-            $this->logger->addError("fail in getByStatus {$e}");
-        }
+        if (!empty($medias)) {
+            foreach ($medias as $media) {
+                $job = $this->mediaService->getJob($media['job_id']);
 
-        if ($media) {
-            $job = $this->mediaService->getJob($media['job_id']);
+                // ジョブのステータスを更新
+                if (!is_null($job) && $media['job_state'] != $job->getState()) {
+                    $state = $job->getState();
+                    $this->logger->addInfo("job state change. new state:{$state}");
+                    try {
+                        // ジョブが完了の場合、URL発行プロセス
+                        if ($state == Job::STATE_FINISHED) {
+                            // ジョブのアウトプットアセットを取得
+                            $assets = $this->mediaService->getJobOutputMediaAssets($job->getId());
 
-            // ジョブのステータスを更新
-            if (!is_null($job) && $media['job_state'] != $job->getState()) {
-                $state = $job->getState();
-                $this->logger->addInfo("job state change. new state:{$state}");
-                try {
-                    // ジョブが完了の場合、URL発行プロセス
-                    if ($state == Job::STATE_FINISHED) {
-                        // ジョブのアウトプットアセットを取得
-                        $assets = $this->mediaService->getJobOutputMediaAssets($job->getId());
+                            $urls = [];
+                            $asset = $assets[0];
+                            $urls['thumbnail'] = $this->createUrlThumbnail($asset->getId(), $media['filename']);
+                            $asset = $assets[1];
+                            $urls['mp4'] = $this->createUrlMp4($asset->getId(), $media['filename']);
+                            $asset = $assets[2];
+                            $urls['streaming'] = $this->createUrl($asset->getId(), $media['filename']);
 
-                        $urls = [];
-                        $asset = $assets[0];
-                        $urls['thumbnail'] = $this->createUrlThumbnail($asset->getId(), $media['filename']);
-                        $asset = $assets[1];
-                        $urls['mp4'] = $this->createUrlMp4($asset->getId(), $media['filename']);
-                        $asset = $assets[2];
-                        $urls['streaming'] = $this->createUrl($asset->getId(), $media['filename']);
+                            // ジョブに関する情報更新と、URL更新
+                            $this->logger->addInfo("changing status to STATUS_JOB_FINISHED... id:{$media['id']}");
+                            $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_FINISHED, $urls);
 
-                        // ジョブに関する情報更新と、URL更新
-                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_FINISHED, $urls);
-
-                        // TODO URL通知
-//                         if (!is_null($url)) {
-//                             $this->sendEmail($media);
-//                         }
-                    } else if ($state == Job::STATE_ERROR || $state == Job::STATE_CANCELED) {
-                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_ERROR);
-                    } else {
-                        $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_CREATED);
+                            // TODO URL通知
+//                             if (!is_null($url)) {
+//                                 $this->sendEmail($media);
+//                             }
+                        } else if ($state == Job::STATE_ERROR || $state == Job::STATE_CANCELED) {
+                            $this->logger->addInfo("changing status to STATUS_ERROR... id:{$media['id']}");
+                            $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_ERROR);
+                        } else {
+                            $this->logger->addInfo("changing state_job to {$state}... id:{$media['id']}");
+                            $mediaModel->updateJobState($media['id'], $state, MediaModel::STATUS_JOB_CREATED);
+                        }
+                    } catch (\Exception $e) {
+                        $this->logger->addError("delivering url for streaming throw exception. message:{$e}");
                     }
-                } catch (\Exception $e) {
-                    $this->logger->addError("delivering url for streaming throw exception. message:{$e}");
                 }
             }
         }
@@ -295,31 +288,34 @@ class MediaTask extends BaseTask
      */
     public function copyFileAction()
     {
-        $media = null;
+        $mediaModel = new MediaModel;
+        $medias = $mediaModel->getListByStatus(MediaModel::STATUS_JOB_FINISHED, 10);
+        $this->logger->addInfo("medias:" . var_export($medias, true));
 
-        try {
-            // ジョブ完了済みのメディアをひとつ取得
-            $mediaModel = new MediaModel;
-            $media = $mediaModel->getByStatus(MediaModel::STATUS_JOB_FINISHED);
-            $this->logger->addInfo("media:" . var_export($media, true));
-        } catch (\Exception $e) {
-            $this->logger->addError("fail in getByStatus {$e}");
-        }
+        if (!empty($medias)) {
+            foreach ($medias as $media) {
+                $result = false;
 
-        if ($media) {
-            try {
-                $to = MediaModel::getFilePath4Jpeg2000Ready($media['filename']);
-                $sourceUrl = $media['url_mp4'];
+                try {
+                    $to = MediaModel::getFilePath4Jpeg2000Ready($media['filename']);
+                    $sourceUrl = $media['url_mp4'];
 
-                if ($this->fileService->copyFile($sourceUrl, $to)) {
+                    $this->fileService->copyFile($sourceUrl, $to);
+
                     $this->logger->addInfo("changing status to copied... id:{$media['id']}");
-                    $mediaModel->updateStatus($media['id'], MediaModel::STATUS_JPEG2000_READY);
-                } else {
-                    $this->logger->addInfo("changing status to error... id:{$media['id']}");
-                    $mediaModel->updateStatus($media['id'], MediaModel::STATUS_ERROR);
+                    $result = $mediaModel->updateStatus($media['id'], MediaModel::STATUS_JPEG2000_READY);
+                } catch (\Exception $e) {
+                    $this->logger->addError("copy failed. message:{$e}");
                 }
-            } catch (\Exception $e) {
-                $this->logger->addError("copy failed. message:{$e}");
+
+                if (!$result) {
+                    try {
+                        $this->logger->addInfo("changing status to error... id:{$media['id']}");
+                        $mediaModel->updateStatus($media['id'], MediaModel::STATUS_ERROR);
+                    } catch (Exception $e) {
+                        $this->logger->addError("updateStatus to error failed. message:{$e}");
+                    }
+                }
             }
         }
     }
@@ -329,28 +325,25 @@ class MediaTask extends BaseTask
      */
     public function checkJpeg2000EncodeAction()
     {
-        $media = null;
+        $mediaModel = new MediaModel;
+        $medias = $mediaModel->getListByStatus(MediaModel::STATUS_JPEG2000_READY, 10);
+        $this->logger->addInfo("medias:" . var_export($medias, true));
 
-        try {
-            $mediaModel = new MediaModel;
-            $media = $mediaModel->getByStatus(MediaModel::STATUS_JPEG2000_READY);
-            $this->logger->addInfo("media:" . var_export($media, true));
-        } catch (\Exception $e) {
-            $this->logger->addError("fail in getByStatus {$e}");
-        }
+        if (!empty($medias)) {
+            foreach ($medias as $media) {
+                try {
+                    $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded($media['filename']));
+                    $this->logger->addDebug(var_export($properties, true));
 
-        if ($media) {
-            try {
-                $properties = $this->fileService->getFileProperties(MediaModel::getFilePath4Jpeg2000Encoded($media['filename']));
-                $this->logger->addDebug(var_export($properties, true));
-
-                if (!is_null($properties)) {
-                    $this->logger->addInfo("changing status to encoded... id:{$media['id']}");
-                } else {
-                    $this->logger->addInfo("not encoded yet. id:{$media['id']}");
+                    // TODO
+//                     if (!is_null($properties)) {
+//                         $this->logger->addInfo("changing status to encoded... id:{$media['id']}");
+//                     } else {
+//                         $this->logger->addInfo("not encoded yet. id:{$media['id']}");
+//                     }
+                } catch (\Exception $e) {
+                    $this->logger->addError("getFile failed. message:{$e}");
                 }
-            } catch (\Exception $e) {
-                $this->logger->addError("getFile failed. message:{$e}");
             }
         }
     }
@@ -381,4 +374,3 @@ class MediaTask extends BaseTask
         }
     }
 }
-?>
