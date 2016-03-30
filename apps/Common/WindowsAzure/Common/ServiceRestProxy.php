@@ -71,7 +71,9 @@ class ServiceRestProxy
 //             CURLOPT_HTTPHEADER => $httpHeaders,
             CURLOPT_RETURNTRANSFER => false,
             CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+//             CURLOPT_VERBOSE => true,
+//             CURLOPT_NOPROGRESS => false,
         ];
         if (!is_null($body)) {
             $options[CURLOPT_POSTFIELDS] = $body;

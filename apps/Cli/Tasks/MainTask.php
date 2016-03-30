@@ -47,8 +47,10 @@ class MainTask extends BaseTask
     public function putBlobAction()
     {
         $container = 'mycontainer';
-        $blob = 'test.txt';
-        $body = 'test';
+//         $blob = 'test.txt';
+//         $body = 'test';
+        $blob = 'test.mp4';
+        $body = file_get_contents(__DIR__ . '/../../../logs/test_5mb.mp4');
         $this->blobService->putBlob($container, $blob, $body);
 //         $this->blobService2->createBlockBlob($container, $blob, $body);
     }
