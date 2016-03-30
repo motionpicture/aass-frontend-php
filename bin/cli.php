@@ -58,14 +58,14 @@ $di->set('logger', function() use ($di, $arguments)
     $formatter = new \Monolog\Formatter\LineFormatter(null, null, true); // 第３引数で改行を有効に
     $stream = new \Monolog\Handler\StreamHandler(
         __DIR__ . "/../logs/{$di->get('mode')}/Cli/" . ucfirst($arguments['task']) . ucfirst($arguments['action']) . "/" . date('Ymd') . ".log",
-        ($di->get('mode') == 'dev') ? \Monolog\Logger::DEBUG : \Monolog\Logger::INFO
+        ($di->get('mode') == 'dev' || $di->get('mode') == 'test') ? \Monolog\Logger::DEBUG : \Monolog\Logger::INFO
     );
     $stream->setFormatter($formatter);
     $logger = new \Monolog\Logger("AassCli[{$di->get('mode')}] [PID:{$pid}]");
     $logger->pushHandler($stream);
 
     // 開発時は標準出力にも
-    if ($di->get('mode') == 'dev') {
+    if ($di->get('mode') == 'dev' || $di->get('mode') == 'test') {
         $stream = new \Monolog\Handler\StreamHandler(
             'php://stdout',
             \Monolog\Logger::DEBUG
