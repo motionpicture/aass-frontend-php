@@ -63,6 +63,19 @@ EOF;
         return $statement->fetchAll();
     }
 
+    public function delete($id)
+    {
+        $query = <<<EOF
+DELETE FROM media WHERE id = :id
+EOF;
+        $statement = $this->db->prepare($query);
+        $result = $statement->execute([
+            'id' => $id
+        ]);
+
+        return $result;
+    }
+
     public static function getFilePath4Jpeg2000Ready($filename)
     {
         return self::AZURE_FILE_SHARE_NAME_JPEG2000_READY . "/{$filename}.mp4";

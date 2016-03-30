@@ -256,7 +256,7 @@ var MediaEdit = {
                 self.createBlobBlockTimer = setInterval(function()
                 {
                     // 回線が遅い場合、アクセスがたまりすぎないように調整(ブラウザ同時接続数を考慮)
-                    if (self.blobBlockCreatingIndexes.length > 0) {
+                    if (self.blobBlockCreatingIndexes.length > 2) {
                         return;
                     }
 

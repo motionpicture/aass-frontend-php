@@ -354,5 +354,31 @@ class MediaTask extends BaseTask
             }
         }
     }
+
+    public function deleteAction()
+    {
+        // 削除済みのメディアを取得
+        $mediaModel = new MediaModel;
+        $medias = $mediaModel->getListByStatus(MediaModel::STATUS_DELETED, 10);
+        $this->logger->addInfo("medias:" . var_export($medias, true));
+
+        if (!empty($medias)) {
+            foreach ($medias as $media) {
+                try {
+                    $this->logger->addInfo("deleting asset... asset_id:{$media['asset_id']}");
+                    $this->mediaService->deleteAsset($media['asset_id']);
+                } catch (\Exception $e) {
+                    $this->logger->addError("deleteAsset failed. message:{$e}");
+                }
+
+                try {
+                    $this->logger->addInfo("deleting media... id:{$media['id']}");
+                    $mediaModel->delete($media['id']);
+                } catch (\Exception $e) {
+                    $this->logger->addError("delete failed. message:{$e}");
+                }
+            }
+        }
+    }
 }
 ?>

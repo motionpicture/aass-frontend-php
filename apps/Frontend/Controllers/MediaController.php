@@ -290,13 +290,6 @@ class MediaController extends BaseController
             $message = '削除に失敗しました';
         }
 
-        // TODO アセットはバッチ処理で削除
-//         try {
-//             $this->mediaService->deleteAsset($media['asset_id']);
-//         } catch (\Exception $e) {
-//             $this->logger->addError("mediaModel->deleteAsset throw exception. message:{$e}");
-//         }
-
         echo json_encode([
             'isSuccess' => $isSuccess,
             'message' => $message

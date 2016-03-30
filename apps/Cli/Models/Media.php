@@ -26,12 +26,11 @@ SELECT id, title, status, filename, extension, url_thumbnail, url_mp4, url_strea
  FROM media
  WHERE status = :status
  ORDER BY created_at ASC
- LIMIT :limit
+ LIMIT {$limit}
 EOF;
         $statement = $this->db->prepare($query);
         $statement->execute([
             'status' => $status,
-            'limit' => $limit,
         ]);
 
         return $statement->fetchAll();
